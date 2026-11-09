@@ -11,6 +11,20 @@ interface KeycapProps {
   fingerGuideEnabled?: boolean;
 }
 
+const COMPACT_LABELS: Record<string, string> = {
+  Backspace: '⌫',
+  Enter: '↵',
+  Shift: '⇧',
+  CapsLock: '⇪',
+  'Caps Lock': '⇪',
+  Caps: '⇪',
+  Tab: '⇥',
+  Ctrl: 'Ctl',
+  Alt: 'Alt',
+  AltGr: 'Alt',
+  Space: 'Space',
+};
+
 export const Keycap: React.FC<KeycapProps> = ({
   mapping,
   rowIndex = 1,
@@ -63,17 +77,16 @@ export const Keycap: React.FC<KeycapProps> = ({
   const isSpecialKey = Boolean(displayLabel);
 
   // Responsive height based on row type
-  let heightClass = 'h-[35px] sm:h-[37px]'; // standard rows 1, 2, 3
+  let heightClass = 'h-[30px] sm:h-[37px]'; // standard rows 1, 2, 3
   if (rowIndex === 0) {
-    heightClass = 'h-[33px] sm:h-[35px]'; // number row
+    heightClass = 'h-[28px] sm:h-[35px]'; // number row
   } else if (rowIndex === 4) {
-    heightClass = 'h-[36px] sm:h-[38px]'; // spacebar row
+    heightClass = 'h-[32px] sm:h-[38px]'; // spacebar row
   }
 
-  // Width flex calculation
+  // Width flex calculation (fluid flex without rigid minWidth on small viewports)
   const flexStyle = {
     flex: `${widthMultiplier} ${widthMultiplier} 0%`,
-    minWidth: `${Math.round(widthMultiplier * 28)}px`,
   };
 
   // Finger guide color accents
@@ -82,7 +95,7 @@ export const Keycap: React.FC<KeycapProps> = ({
     'left-ring': 'border-b-purple-400 dark:border-b-purple-500',
     'left-middle': 'border-b-blue-400 dark:border-b-blue-500',
     'left-index': 'border-b-teal-400 dark:border-b-teal-500',
-    'thumb': 'border-b-emerald-400 dark:border-b-emerald-500',
+    thumb: 'border-b-emerald-400 dark:border-b-emerald-500',
     'right-index': 'border-b-amber-400 dark:border-b-amber-500',
     'right-middle': 'border-b-orange-400 dark:border-b-orange-500',
     'right-ring': 'border-b-rose-400 dark:border-b-rose-500',
@@ -112,31 +125,35 @@ export const Keycap: React.FC<KeycapProps> = ({
       'bg-indigo-600 text-white border-indigo-700 shadow-sm ring-1 ring-indigo-400/40';
   }
 
+  const specialLabelText = displayLabel || '';
+  const compactLabelText = displayLabel ? (COMPACT_LABELS[displayLabel] || displayLabel) : '';
+
   return (
     <button
       type="button"
       onClick={() => onClick(code)}
       style={flexStyle}
-      className={`relative ${heightClass} m-[1px] sm:m-[1.5px] rounded border flex flex-col justify-between px-1 py-0.5 select-none transition-all duration-75 cursor-pointer text-left focus:outline-none ${fingerBorder ? `border-b-[2px] ${fingerBorder}` : ''} ${stateClasses}`}
+      className={`relative ${heightClass} min-w-0 m-[0.5px] sm:m-[1.5px] rounded border flex flex-col justify-between px-0.5 sm:px-1 py-0.5 select-none transition-all duration-75 cursor-pointer text-left focus:outline-none ${fingerBorder ? `border-b-[2px] ${fingerBorder}` : ''} ${stateClasses}`}
       aria-label={`${displayLabel || code}: ${primaryChar || code}`}
       title={`${code} (${language === 'hi' ? `Hindi: ${primaryChar}` : `English: ${primaryChar}`})`}
     >
       {isSpecialKey ? (
-        <div className="w-full h-full flex items-center justify-center font-medium text-[9.5px] sm:text-[10.5px] text-center leading-tight">
-          {displayLabel}
+        <div className="w-full h-full flex items-center justify-center font-medium text-[8px] sm:text-[10.5px] text-center leading-tight truncate px-0.5">
+          <span className="sm:hidden">{compactLabelText}</span>
+          <span className="hidden sm:inline">{specialLabelText}</span>
         </div>
       ) : (
         <>
           {/* Top Row: secondary character & shifted preview */}
-          <div className="flex items-center justify-between w-full text-[8px] sm:text-[9px] leading-none opacity-60 font-mono">
-            <span>{secondaryChar}</span>
+          <div className="flex items-center justify-between w-full text-[7px] sm:text-[9px] leading-none opacity-60 font-mono truncate">
+            <span className="truncate">{secondaryChar}</span>
             {language === 'en' && hindi.normal && (
-              <span className="font-hindi text-[8.5px] sm:text-[9.5px] font-normal opacity-75">
+              <span className="font-hindi text-[7px] sm:text-[9.5px] font-normal opacity-75 truncate">
                 {hindi.normal}
               </span>
             )}
             {language === 'hi' && shiftedSubChar && !isShift && (
-              <span className="font-hindi text-[8.5px] sm:text-[9.5px] font-normal opacity-75">
+              <span className="font-hindi text-[7px] sm:text-[9.5px] font-normal opacity-75 truncate">
                 {shiftedSubChar}
               </span>
             )}
@@ -147,8 +164,8 @@ export const Keycap: React.FC<KeycapProps> = ({
             <span
               className={`leading-none ${
                 language === 'hi'
-                  ? 'font-hindi text-[13px] sm:text-[14px] font-semibold'
-                  : 'font-sans text-xs sm:text-[13px] font-bold'
+                  ? 'font-hindi text-[11px] sm:text-[14px] font-semibold'
+                  : 'font-sans text-[10px] sm:text-[13px] font-bold'
               }`}
             >
               {primaryChar}

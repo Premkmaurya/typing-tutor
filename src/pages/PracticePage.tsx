@@ -225,10 +225,10 @@ export const PracticePage: React.FC = () => {
   const nextExpectedModifiers = nextKeyInfo.modifiers;
 
   return (
-    <div className="w-full max-w-[980px] mx-auto px-2 sm:px-3 py-1 sm:py-1.5 flex flex-col justify-start gap-1 sm:gap-1.5 flex-1">
+    <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-2.5 sm:py-4 flex flex-col justify-start gap-2.5 sm:gap-3.5 flex-1">
       {/* Lesson Header & Metadata */}
-      <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+      <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
           <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
             {lesson.title}
           </h1>
@@ -240,7 +240,7 @@ export const PracticePage: React.FC = () => {
 
         {/* Lesson Progress Percentage */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-20 sm:w-28 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div className="w-20 sm:w-32 bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
             <div
               className="bg-blue-600 h-full rounded-full transition-all duration-150"
               style={{
@@ -250,7 +250,7 @@ export const PracticePage: React.FC = () => {
               }}
             />
           </div>
-          <span className="text-[11px] font-mono font-semibold text-slate-600 dark:text-slate-300">
+          <span className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300">
             {Math.round(
               (currentWordIndex / Math.max(1, words.length)) * 100
             )}

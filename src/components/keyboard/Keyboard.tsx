@@ -56,9 +56,9 @@ export const Keyboard: React.FC<KeyboardProps> = ({
         </div>
       </div>
 
-      {/* Responsive Keyboard Container */}
-      <div className="w-full overflow-x-auto pb-0.5 scrollbar-thin">
-        <div className="min-w-[620px] flex flex-col gap-[3px] sm:gap-1">
+      {/* Responsive Fluid Keyboard Container */}
+      <div className="w-full overflow-hidden pb-0.5">
+        <div className="w-full flex flex-col gap-[2px] sm:gap-1">
           {ENGLISH_KEYBOARD_ROWS.map((row, idx) => (
             <KeyboardRow
               key={idx}

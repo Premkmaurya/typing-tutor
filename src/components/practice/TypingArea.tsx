@@ -50,23 +50,23 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       onClick={() => containerRef.current?.focus()}
       onKeyDown={onKeyDown}
       onKeyUp={onKeyUp}
-      className="relative w-full min-h-[85px] sm:min-h-[92px] p-2.5 sm:p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-text transition-all select-none"
+      className="relative w-full min-h-[110px] sm:min-h-[135px] p-3.5 sm:p-5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-text transition-all select-none flex flex-col justify-between"
       aria-label="Typing practice input area. Press any key to type."
     >
       {/* Paused Overlay */}
       {status === 'paused' && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs rounded-lg">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs rounded-xl">
           <p className="text-base font-bold text-slate-800 dark:text-slate-100">Practice Paused</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Click Resume or press any key to continue</p>
+          <p className="text-xs text-slate-500 mt-1">Click Resume or press any key to continue</p>
         </div>
       )}
 
       {/* Target Passage rendered at WORD level */}
       <div
         data-testid="typing-passage"
-        className={`leading-relaxed tracking-wide flex flex-wrap gap-x-2 gap-y-1.5 items-baseline select-none ${
+        className={`leading-relaxed tracking-wide flex flex-wrap gap-x-2.5 gap-y-2 items-baseline select-none ${
           isHindi
-            ? 'font-hindi text-lg sm:text-xl'
+            ? 'font-hindi text-xl sm:text-2xl'
             : 'font-mono text-base sm:text-lg'
         }`}
       >
@@ -79,7 +79,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
           // 3. Active word: BLUE (#60a5fa)
           // 4. Pending word: GRAY (#64748b)
           let wordClasses =
-            'text-slate-400 dark:text-slate-600 border-b-2 border-transparent px-1.5 py-0.5 rounded';
+            'text-slate-400 dark:text-slate-500 border-b-2 border-transparent px-1.5 py-0.5 rounded';
 
           if (wordResult.status === 'correct') {
             wordClasses =
@@ -119,7 +119,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
               correct: 'text-emerald-600 dark:text-emerald-400',
               incorrect: 'text-red-500 dark:text-red-400',
               active: 'text-blue-700 dark:text-blue-300 border-b-2 border-blue-600 dark:border-blue-400',
-              pending: 'text-slate-400 dark:text-slate-600',
+              pending: 'text-slate-400 dark:text-slate-500',
             }[characterStatus];
 
             return (
@@ -165,7 +165,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
               {isCurrent && currentWordBuffer.length === 0 && (
                 <span
                   data-testid="word-cursor"
-                  className="absolute -top-0.5 left-0 w-0.5 h-5 sm:h-6 bg-blue-600 dark:bg-blue-400 animate-cursor-pulse pointer-events-none"
+                  className="absolute -top-0.5 left-0 w-0.5 h-6 sm:h-7 bg-blue-600 dark:bg-blue-400 animate-cursor-pulse pointer-events-none"
                 />
               )}
               {renderedCharacters}
@@ -176,7 +176,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       </div>
 
       {/* Helper prompt below */}
-      <div className="mt-1.5 pt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[10.5px] text-slate-400 dark:text-slate-500">
+      <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">
         <span>Press Space to validate word and continue</span>
         <span>
           Word {Math.min(currentWordIndex + 1, wordResults.length)} of {wordResults.length}

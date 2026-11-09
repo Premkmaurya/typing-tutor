@@ -53,46 +53,92 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-blue-500/10">
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-blue-100 mb-3">
-            <Sparkles size={14} />
-            Bilingual Typing Mastery
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-            Master Hindi InScript & English QWERTY
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-blue-100">
-            Scientifically structured lessons, real-time keyboard feedback, and precise Devanagari Unicode processing.
-          </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      {/* Balanced Technical Hero Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-lg">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <div className="lg:col-span-7">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-blue-100 mb-3">
+              <Sparkles size={14} />
+              Bilingual Typing Mastery
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
+              Master Hindi InScript & English QWERTY
+            </h1>
+            <p className="mt-2.5 text-sm sm:text-base text-blue-100 leading-relaxed max-w-xl">
+              Scientifically structured lessons, real-time keyboard feedback, and precise Devanagari Unicode processing.
+            </p>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/setup">
-              <Button
-                size="lg"
-                className="bg-white text-blue-700 hover:bg-blue-50 shadow-md font-semibold"
-                icon={<Play size={18} />}
-              >
-                Start Practicing
-              </Button>
-            </Link>
-            <Link to="/progress">
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white/30 text-white hover:bg-white/10"
-                icon={<ArrowRight size={18} />}
-              >
-                View Analytics
-              </Button>
-            </Link>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link to="/setup">
+                <Button
+                  size="lg"
+                  className="bg-white text-blue-700 hover:bg-blue-50 shadow-md font-semibold"
+                  icon={<Play size={18} />}
+                >
+                  Start Practicing
+                </Button>
+              </Link>
+              <Link to="/progress">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-white/30 text-white hover:bg-white/10"
+                  icon={<ArrowRight size={18} />}
+                >
+                  View Analytics
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Technical InScript Architecture Card (Replaces empty space) */}
+          <div className="lg:col-span-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-white/15">
+              <span className="text-xs font-mono font-semibold tracking-wider uppercase text-blue-100">
+                Input Engine Specs
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/20 text-white">
+                BIS IS 13194:1991
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center text-blue-100">
+                <span>Layout Standard</span>
+                <span className="font-mono font-semibold text-white">Unicode CLDR 43</span>
+              </div>
+              <div className="flex justify-between items-center text-blue-100">
+                <span>Grapheme Resolution</span>
+                <span className="font-mono font-semibold text-white">Extended Cluster</span>
+              </div>
+              <div className="flex justify-between items-center text-blue-100">
+                <span>OS Keyboard Req.</span>
+                <span className="font-mono font-semibold text-white">None (Client Virtualized)</span>
+              </div>
+            </div>
+
+            {/* Live Keycode Mapping Samples */}
+            <div className="pt-2 border-t border-white/15 flex items-center justify-between text-[11px] font-mono text-blue-100">
+              <span className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">H</span>
+                <span>→ प</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">J</span>
+                <span>→ र</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">K</span>
+                <span>→ क</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">L</span>
+                <span>→ त</span>
+              </span>
+            </div>
           </div>
         </div>
-
-        {/* Decorative background shape */}
-        <div className="absolute -right-12 -bottom-12 w-80 h-80 bg-white/5 rounded-full blur-2xl pointer-events-none" />
       </div>
 
       {/* Main KPI Stat Cards */}
