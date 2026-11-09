@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      if (typeof Element !== 'undefined' && !Element.prototype.checkVisibility) {
+        Element.prototype.checkVisibility = function(options) {
+          if (!this.isConnected) return false;
+          var style = window.getComputedStyle(this);
+          if (style.display === 'none' || style.visibility === 'hidden') return false;
+          if (options && options.checkOpacity && (style.opacity === '0' || style.opacity === 0)) return false;
+          return true;
+        };
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">

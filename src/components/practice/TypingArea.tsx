@@ -2,6 +2,8 @@ import React, { useRef, useEffect } from 'react';
 import { TypingLesson } from '../../types/lesson.types';
 import { WordResult } from '../../types/typing.types';
 import { extractWordsFromText, initializeWordResults } from '../../core/typing/wordValidator';
+import { splitIntoGraphemes } from '../../core/typing/graphemes';
+import { textToLessonSteps } from '../../core/typing/composer';
 
 interface TypingAreaProps {
   lesson: TypingLesson;
@@ -39,7 +41,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
   const words = propWords ?? extractWordsFromText(targetText || '');
   const wordResults: WordResult[] =
     propWordResults ??
-    (words.length > 0 ? initializeWordResults(words) : []);
+    (words.length > 0 ? initializeWordResults(words, language) : []);
 
   return (
     <div
@@ -90,6 +92,66 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
               'text-blue-700 dark:text-blue-300 font-bold bg-blue-100 dark:bg-blue-950/80 border-b-2 border-blue-600 rounded px-1.5 py-0.5 shadow-2xs';
           }
 
+          const graphemes = splitIntoGraphemes(wordResult.expected, language);
+          let characterOffset = 0;
+          const renderedCharacters = graphemes.map((grapheme, characterIndex) => {
+            const stepCount = textToLessonSteps(grapheme, language).length;
+            const results = wordResult.characters.slice(characterOffset, characterOffset + stepCount);
+            characterOffset += stepCount;
+            const hasIncorrect = results.some((character) => character.status === 'incorrect');
+            const hasCorrect = results.some((character) => character.status === 'correct');
+            const hasActive = results.some((character) => character.status === 'active');
+            const hasCursor = hasActive && wordResult.status === 'active';
+            const characterStatus =
+              wordResult.status === 'correct' || wordResult.status === 'incorrect'
+                ? wordResult.status
+                : hasIncorrect
+                  ? 'incorrect'
+                  : hasCorrect
+                    ? 'correct'
+                    : hasActive || (isCurrent && currentWordBuffer.length === 0 && characterIndex === 0)
+                      ? 'active'
+                      : 'pending';
+            const text = results.length > 0
+              ? results.map((character) => character.actual || character.expected).join('')
+              : grapheme;
+            const characterClasses = {
+              correct: 'text-emerald-600 dark:text-emerald-400',
+              incorrect: 'text-red-500 dark:text-red-400',
+              active: 'text-blue-700 dark:text-blue-300 border-b-2 border-blue-600 dark:border-blue-400',
+              pending: 'text-slate-400 dark:text-slate-600',
+            }[characterStatus];
+
+            return (
+              <span
+                key={characterIndex}
+                data-testid={`character-${idx}-${characterIndex}`}
+                data-status={characterStatus}
+                data-cursor={hasCursor}
+                className={`${characterClasses} ${
+                  hasCursor ? 'border-b-2 border-blue-600 dark:border-blue-400' : ''
+                }`}
+              >
+                {text}
+              </span>
+            );
+          });
+          const extraCharacters = wordResult.characters.slice(characterOffset);
+          const renderedExtraCharacters = extraCharacters.map((character, extraIndex) => (
+            <span
+              key={`extra-${extraIndex}`}
+              data-testid={`character-${idx}-extra-${extraIndex}`}
+              data-status={character.status}
+              className={
+                character.status === 'incorrect'
+                  ? 'text-red-500 dark:text-red-400'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }
+            >
+              {character.actual}
+            </span>
+          ));
+
           return (
             <span
               key={idx}
@@ -100,30 +162,18 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
               className={`relative inline-block transition-all duration-150 ${wordClasses}`}
             >
               {/* Blinking cursor indicator on active word */}
-              {isCurrent && (
+              {isCurrent && currentWordBuffer.length === 0 && (
                 <span
                   data-testid="word-cursor"
                   className="absolute -top-0.5 left-0 w-0.5 h-5 sm:h-6 bg-blue-600 dark:bg-blue-400 animate-cursor-pulse pointer-events-none"
                 />
               )}
-              {wordResult.expected}
+              {renderedCharacters}
+              {renderedExtraCharacters}
             </span>
           );
         })}
       </div>
-
-      {/* Live typing buffer preview for the current active word */}
-      {currentWordBuffer.length > 0 && (
-        <div
-          data-testid="word-buffer-preview"
-          className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono"
-        >
-          <span className="text-[11px] text-slate-400">Current input:</span>
-          <span className="px-1.5 py-0.2 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded font-semibold">
-            {currentWordBuffer}
-          </span>
-        </div>
-      )}
 
       {/* Helper prompt below */}
       <div className="mt-1.5 pt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[10.5px] text-slate-400 dark:text-slate-500">

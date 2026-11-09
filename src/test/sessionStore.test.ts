@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useSessionStore } from '../store/sessionStore';
 import { ALL_LESSONS } from '../data/lessons';
+import { textToLessonSteps } from '../core/typing/composer';
+import { TypingLesson } from '../types/lesson.types';
 
 describe('Session Store Tests - Word-Level Typing Architecture', () => {
   const lesson = ALL_LESSONS[0]; // English Home row: 'asdf jkl; asdf jkl; asdf jkl;'
@@ -24,6 +26,79 @@ describe('Session Store Tests - Word-Level Typing Architecture', () => {
     expect(state.wordAccuracy).toBe(100);
     expect(state.durationMinutes).toBe(3);
     expect(state.remainingSeconds).toBe(180);
+  });
+
+  it('updates English character feedback per key before word finalization', () => {
+    const lesson: TypingLesson = {
+      ...ALL_LESSONS[0],
+      id: 'live-feedback-en',
+      targetText: 'focus energy practice rhythm motion',
+      steps: [],
+    };
+    useSessionStore.getState().startLesson(lesson, 0);
+
+    for (const [index, code] of ['KeyF', 'KeyO', 'KeyC', 'KeyU', 'KeyS'].entries()) {
+      useSessionStore.getState().processKey(code);
+      expect(useSessionStore.getState().wordResults[0].characters[index].status).toBe('correct');
+    }
+    expect(useSessionStore.getState().wordResults[0].status).toBe('active');
+    useSessionStore.getState().processKey('Space');
+    expect(useSessionStore.getState().wordResults[0].status).toBe('correct');
+
+    for (const [index, code] of ['KeyE', 'KeyN', 'KeyE', 'KeyR', 'KeyG'].entries()) {
+      useSessionStore.getState().processKey(code);
+      expect(useSessionStore.getState().wordResults[1].characters[index].status).toBe('correct');
+    }
+    useSessionStore.getState().processKey('KeyX');
+    expect(useSessionStore.getState().wordResults[1].characters[5]).toMatchObject({
+      expected: 'y',
+      actual: 'x',
+      status: 'incorrect',
+    });
+
+    useSessionStore.getState().processKey('Space');
+    expect(useSessionStore.getState().wordResults[1].status).toBe('incorrect');
+    expect(useSessionStore.getState().currentWordIndex).toBe(2);
+    expect(useSessionStore.getState().wordResults[2].status).toBe('active');
+
+    for (const [index, code] of [
+      'KeyP', 'KeyR', 'KeyA', 'KeyC', 'KeyT', 'KeyI', 'KeyC', 'KeyE',
+    ].entries()) {
+      useSessionStore.getState().processKey(code);
+      expect(useSessionStore.getState().wordResults[2].characters[index].status).toBe('correct');
+    }
+  });
+
+  it('updates Hindi InScript typing units immediately and removes live feedback on Backspace', () => {
+    const lesson: TypingLesson = {
+      ...ALL_LESSONS.find((item) => item.language === 'hi')!,
+      id: 'live-feedback-hi',
+      targetText: 'मेरा भारत सुंदर है',
+      steps: [],
+    };
+    useSessionStore.getState().startLesson(lesson, 0);
+
+    const firstWordSteps = textToLessonSteps('मेरा', 'hi');
+    firstWordSteps.forEach((step, index) => {
+      useSessionStore.getState().processKey(step.keyCode, {
+        shift: step.modifiers?.includes('Shift'),
+        altGr: step.modifiers?.includes('AltGr'),
+      });
+      expect(useSessionStore.getState().wordResults[0].characters[index].status).toBe('correct');
+    });
+    useSessionStore.getState().processKey('Space');
+
+    const mistypedWordSteps = textToLessonSteps('भारट', 'hi');
+    mistypedWordSteps.forEach((step) => {
+      useSessionStore.getState().processKey(step.keyCode, {
+        shift: step.modifiers?.includes('Shift'),
+        altGr: step.modifiers?.includes('AltGr'),
+      });
+    });
+    expect(useSessionStore.getState().wordResults[1].characters[3].status).toBe('incorrect');
+    useSessionStore.getState().processKey('Backspace');
+    expect(useSessionStore.getState().wordResults[1].characters[3].status).toBe('active');
+    expect(useSessionStore.getState().currentWordBuffer).toBe('भार');
   });
 
   it('accumulates typed characters in currentWordBuffer and advances word on Space', () => {

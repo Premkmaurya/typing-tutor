@@ -53,12 +53,6 @@ export const Keyboard: React.FC<KeyboardProps> = ({
               CAPS
             </span>
           )}
-          <span className="hidden sm:inline text-[10px]">
-            Next:{' '}
-            <strong className="text-blue-600 dark:text-blue-400 font-mono">
-              {nextExpectedCode || 'Done'}
-            </strong>
-          </span>
         </div>
       </div>
 

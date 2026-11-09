@@ -19,10 +19,10 @@ describe('TypingArea Component Word-Level Visual Feedback', () => {
 
   it('renders initial state with active blue word on word 0 and pending gray on remaining', () => {
     const wordResults: WordResult[] = [
-      { expected: 'the', actual: '', status: 'active', errors: 0 },
-      { expected: 'quick', actual: '', status: 'pending', errors: 0 },
-      { expected: 'brown', actual: '', status: 'pending', errors: 0 },
-      { expected: 'fox', actual: '', status: 'pending', errors: 0 },
+      { expected: 'the', actual: '', status: 'active', errors: 0, characters: [] },
+      { expected: 'quick', actual: '', status: 'pending', errors: 0, characters: [] },
+      { expected: 'brown', actual: '', status: 'pending', errors: 0, characters: [] },
+      { expected: 'fox', actual: '', status: 'pending', errors: 0, characters: [] },
     ];
 
     render(
@@ -51,12 +51,12 @@ describe('TypingArea Component Word-Level Visual Feedback', () => {
     expect(cursor).not.toBeNull();
   });
 
-  it('renders entire incorrect word in RED when finalized with mistake', () => {
+  it('renders entire incorrect word in RED when finalized with mistake and verifies debug UI is removed', () => {
     const wordResults: WordResult[] = [
-      { expected: 'the', actual: 'the', status: 'correct', errors: 0 },
-      { expected: 'quick', actual: 'quik', status: 'incorrect', errors: 1 },
-      { expected: 'brown', actual: '', status: 'active', errors: 0 },
-      { expected: 'fox', actual: '', status: 'pending', errors: 0 },
+      { expected: 'the', actual: 'the', status: 'correct', errors: 0, characters: [] },
+      { expected: 'quick', actual: 'quik', status: 'incorrect', errors: 1, characters: [] },
+      { expected: 'brown', actual: '', status: 'active', errors: 0, characters: [] },
+      { expected: 'fox', actual: '', status: 'pending', errors: 0, characters: [] },
     ];
 
     render(
@@ -88,9 +88,9 @@ describe('TypingArea Component Word-Level Visual Feedback', () => {
     expect(word2.getAttribute('data-status')).toBe('active');
     expect(word2.className).toContain('text-blue-700');
 
-    // Live buffer preview shows current typing
-    const preview = screen.getByTestId('word-buffer-preview');
-    expect(preview.textContent).toContain('bro');
+    // Requirement 5: Debug buffer preview is completely removed from practice interface
+    const preview = screen.queryByTestId('word-buffer-preview');
+    expect(preview).toBeNull();
   });
 
   it('renders Hindi words with proper InScript Devanagari text and classes', () => {
@@ -106,10 +106,10 @@ describe('TypingArea Component Word-Level Visual Feedback', () => {
     };
 
     const wordResults: WordResult[] = [
-      { expected: 'मेरा', actual: 'मेरा', status: 'correct', errors: 0 },
-      { expected: 'भारत', actual: 'भारट', status: 'incorrect', errors: 1 },
-      { expected: 'सुंदर', actual: '', status: 'active', errors: 0 },
-      { expected: 'है', actual: '', status: 'pending', errors: 0 },
+      { expected: 'मेरा', actual: 'मेरा', status: 'correct', errors: 0, characters: [] },
+      { expected: 'भारत', actual: 'भारट', status: 'incorrect', errors: 1, characters: [] },
+      { expected: 'सुंदर', actual: '', status: 'active', errors: 0, characters: [] },
+      { expected: 'है', actual: '', status: 'pending', errors: 0, characters: [] },
     ];
 
     render(

@@ -52,7 +52,7 @@ describe('Character Status and Real-time Mistake Feedback', () => {
     const cleared = computeCharacterResults(sampleSteps, 0, null, []);
     expect(cleared[0].status).toBe('active');
     expect(cleared[0].expected).toBe('a');
-    expect(cleared[0].actual).toBeUndefined();
+    expect(cleared[0].actual).toBe('');
   });
 
   it('turns character green when corrected and advances cursor', () => {
@@ -91,4 +91,3 @@ describe('Character Status and Real-time Mistake Feedback', () => {
     expect(resCorrect[1].expected).toBe('र');
   });
 });
-

@@ -1,6 +1,8 @@
 import { Language } from '../../types/keyboard.types';
 import { WordResult } from '../../types/typing.types';
 import { findKeyForChar } from '../keyboard/layerResolver';
+import { textToLessonSteps } from './composer';
+import { splitIntoGraphemes } from './graphemes';
 
 /**
  * Extracts whitespace-separated word tokens from target text.
@@ -31,9 +33,9 @@ export function areWordsEqual(
  * Computes Levenshtein edit distance between two words to record character-level errors.
  */
 export function computeWordErrors(actual: string, expected: string): number {
-  const a = actual.trim();
-  const b = expected.trim();
-  if (a === b) return 0;
+  const a = splitIntoGraphemes(actual.trim().normalize('NFC'));
+  const b = splitIntoGraphemes(expected.trim().normalize('NFC'));
+  if (a.join('') === b.join('')) return 0;
 
   const m = a.length;
   const n = b.length;
@@ -58,12 +60,17 @@ export function computeWordErrors(actual: string, expected: string): number {
 /**
  * Initializes WordResult array for a given list of words.
  */
-export function initializeWordResults(words: string[]): WordResult[] {
+export function initializeWordResults(words: string[], language: Language = 'en'): WordResult[] {
   return words.map((expected, idx) => ({
     expected,
     actual: '',
     status: idx === 0 ? 'active' : 'pending',
     errors: 0,
+    characters: textToLessonSteps(expected, language).map((step, stepIndex) => ({
+      expected: step.expectedOutput,
+      actual: '',
+      status: idx === 0 && stepIndex === 0 ? 'active' : 'pending',
+    })),
   }));
 }
 
@@ -73,19 +80,26 @@ export function initializeWordResults(words: string[]): WordResult[] {
 export function getNextExpectedKeyForWord(
   expectedWord: string | undefined,
   currentBuffer: string,
-  language: Language
+  language: Language,
+  isLastWord = false
 ): { code: string | null; modifiers: ('Shift' | 'AltGr')[] } {
   if (!expectedWord) {
     return { code: null, modifiers: [] };
   }
 
-  // If user has typed the full expected word or more, next key is Space to finalize
-  if (currentBuffer.length >= expectedWord.length) {
+  const expectedSteps = textToLessonSteps(expectedWord, language);
+  const currentStepIndex = Array.from(currentBuffer).length;
+
+  // If user has typed the full expected word or more
+  if (currentStepIndex >= expectedSteps.length) {
+    if (isLastWord) {
+      return { code: null, modifiers: [] };
+    }
     return { code: 'Space', modifiers: [] };
   }
 
   // Next expected character in the active word
-  const nextChar = expectedWord[currentBuffer.length];
+  const nextChar = expectedSteps[currentStepIndex]?.expectedOutput;
   const req = findKeyForChar(nextChar, language);
 
   if (req) {

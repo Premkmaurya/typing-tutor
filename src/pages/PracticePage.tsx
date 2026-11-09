@@ -24,12 +24,8 @@ export const PracticePage: React.FC = () => {
     currentWordIndex,
     currentWordBuffer,
     wordResults,
-    totalWordsAttempted,
-    correctWords,
     incorrectWords,
-    wordAccuracy,
     activeModifiers,
-    totalKeypresses,
     incorrectKeypresses,
     elapsedSeconds,
     remainingSeconds,
@@ -40,13 +36,11 @@ export const PracticePage: React.FC = () => {
     liveAccuracy,
     startLesson,
     processInput,
-    processKey,
     setModifiers,
     tickTimer,
     pauseSession,
     resumeSession,
     restartSession,
-    finishSession,
   } = useSessionStore();
 
   const { soundEnabled, virtualKeyboardVisible } = useSettingsStore();
@@ -60,10 +54,13 @@ export const PracticePage: React.FC = () => {
     }
   }, [lesson, language, startLesson]);
 
-  // Navigate to results when completed
+  // Navigate to results when completed (brief pause so user sees final word status)
   useEffect(() => {
     if (status === 'completed') {
-      navigate('/results');
+      const timer = setTimeout(() => {
+        navigate('/results');
+      }, 600);
+      return () => clearTimeout(timer);
     }
   }, [status, navigate]);
 
@@ -94,6 +91,8 @@ export const PracticePage: React.FC = () => {
       }
 
       if (status !== 'running' || !lesson) return;
+      if ('repeat' in e && e.repeat) return;
+      if ('isComposing' in e && e.isComposing) return;
 
       // Allow browser shortcuts (Cmd/Ctrl combos, Alt combos, DevTools, Refresh)
       if (
@@ -214,11 +213,13 @@ export const PracticePage: React.FC = () => {
     );
   }
 
+  const isLastWord = currentWordIndex === words.length - 1;
   const activeExpectedWord = words[currentWordIndex];
   const nextKeyInfo = getNextExpectedKeyForWord(
     activeExpectedWord,
     currentWordBuffer,
-    language
+    language,
+    isLastWord
   );
   const nextExpectedCode = nextKeyInfo.code;
   const nextExpectedModifiers = nextKeyInfo.modifiers;

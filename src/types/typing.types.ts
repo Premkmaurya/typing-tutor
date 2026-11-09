@@ -10,13 +10,14 @@ export interface WordResult {
   actual: string;
   status: WordStatus;
   errors: number;
+  characters: CharacterResult[];
 }
 
 export type CharacterStatus = 'correct' | 'incorrect' | 'pending' | 'active';
 
 export interface CharacterResult {
   expected: string;
-  actual?: string;
+  actual: string;
   status: CharacterStatus;
 }
 

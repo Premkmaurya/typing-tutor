@@ -3,7 +3,6 @@ import {
   extractWordsFromText,
   areWordsEqual,
   computeWordErrors,
-  initializeWordResults,
   getNextExpectedKeyForWord,
 } from '../core/typing/wordValidator';
 import { useSessionStore } from '../store/sessionStore';
@@ -63,9 +62,14 @@ describe('Word Validation Engine Unit Tests', () => {
       code: 'KeyI',
       modifiers: [],
     });
-    // When word is complete, next expected key is Space
-    expect(getNextExpectedKeyForWord('quick', 'quick', 'en')).toEqual({
+    // When non-last word is complete, next expected key is Space
+    expect(getNextExpectedKeyForWord('quick', 'quick', 'en', false)).toEqual({
       code: 'Space',
+      modifiers: [],
+    });
+    // When last word is complete, next expected key is null (done)
+    expect(getNextExpectedKeyForWord('quick', 'quick', 'en', true)).toEqual({
+      code: null,
       modifiers: [],
     });
 
@@ -101,87 +105,151 @@ describe('Word-Level Typing Session Workflow & Edge Cases', () => {
     order: 1,
   };
 
-  const hindiLesson: TypingLesson = {
-    id: 'test-hi-words',
+  const vocabularyLesson: TypingLesson = {
+    id: 'test-en-vocab',
+    language: 'en',
+    title: 'Vocabulary Passage',
+    difficulty: 'intermediate',
+    practiceType: 'words',
+    targetText: 'focus energy practice rhythm motion',
+    steps: [],
+    order: 1,
+  };
+
+  const hindiPremLesson: TypingLesson = {
+    id: 'test-hi-prem',
     language: 'hi',
-    title: 'Hindi Word Practice',
+    title: 'Hindi Sentence Practice',
     difficulty: 'beginner',
     practiceType: 'words',
-    targetText: 'मेरा भारत सुंदर है',
+    targetText: 'मेरा नाम प्रेम है',
     steps: [],
     order: 2,
   };
 
-  it('validates the complete English example: the quik brown fox', () => {
-    useSessionStore.getState().startLesson(englishLesson, 0);
-
+  it('validates the complete Section 9 required test: focus energx practice rhythm motion', () => {
+    useSessionStore.getState().startLesson(vocabularyLesson, 0);
     const store = useSessionStore.getState;
-    expect(store().words).toEqual(['the', 'quick', 'brown', 'fox']);
-    expect(store().currentWordIndex).toBe(0);
 
-    // 1. Type "the" + Space
-    useSessionStore.getState().processKey('KeyT');
-    useSessionStore.getState().processKey('KeyH');
-    useSessionStore.getState().processKey('KeyE');
-    expect(store().currentWordBuffer).toBe('the');
+    expect(store().words).toEqual(['focus', 'energy', 'practice', 'rhythm', 'motion']);
+    expect(store().currentWordIndex).toBe(0);
+    expect(store().wordResults[0].status).toBe('active');
+    expect(store().wordResults[1].status).toBe('pending');
+
+    // 1. Type "focus" + Space
+    useSessionStore.getState().processKey('KeyF');
+    useSessionStore.getState().processKey('KeyO');
+    useSessionStore.getState().processKey('KeyC');
+    useSessionStore.getState().processKey('KeyU');
+    useSessionStore.getState().processKey('KeyS');
+    expect(store().currentWordBuffer).toBe('focus');
     useSessionStore.getState().processKey('Space');
 
-    // "the" must be GREEN (correct), cursor advances to word 1
-    expect(store().currentWordIndex).toBe(1);
+    // Immediately validate ONLY "focus" -> GREEN
     expect(store().wordResults[0].status).toBe('correct');
-    expect(store().wordResults[0].expected).toBe('the');
-    expect(store().wordResults[0].actual).toBe('the');
+    expect(store().wordResults[0].expected).toBe('focus');
+    expect(store().wordResults[0].actual).toBe('focus');
     expect(store().correctWords).toBe(1);
     expect(store().incorrectWords).toBe(0);
+    expect(store().totalWordsAttempted).toBe(1);
+    expect(store().wordAccuracy).toBe(100);
 
-    // 2. Type "quik" + Space (incorrect attempt)
-    useSessionStore.getState().processKey('KeyQ');
-    useSessionStore.getState().processKey('KeyU');
-    useSessionStore.getState().processKey('KeyI');
-    useSessionStore.getState().processKey('KeyK');
-    expect(store().currentWordBuffer).toBe('quik');
+    // Automatically move active cursor to "energy" (index 1)
+    expect(store().currentWordIndex).toBe(1);
+    expect(store().wordResults[1].status).toBe('active');
+    expect(store().currentWordBuffer).toBe('');
+
+    // 2. Type "energx" + Space
+    useSessionStore.getState().processKey('KeyE');
+    useSessionStore.getState().processKey('KeyN');
+    useSessionStore.getState().processKey('KeyE');
+    useSessionStore.getState().processKey('KeyR');
+    useSessionStore.getState().processKey('KeyG');
+    useSessionStore.getState().processKey('KeyX');
+    expect(store().currentWordBuffer).toBe('energx');
     useSessionStore.getState().processKey('Space');
 
-    // "quick" must be RED (incorrect), cursor automatically advances to word 2 without blocking
-    expect(store().currentWordIndex).toBe(2);
-    expect(store().wordResults[1].status).toBe('incorrect');
-    expect(store().wordResults[1].expected).toBe('quick');
-    expect(store().wordResults[1].actual).toBe('quik');
+    // Immediately validate ONLY "energy" -> RED (status 'incorrect')
+    expect(store().wordResults[0].status).toBe('correct'); // preserved GREEN!
+    expect(store().wordResults[1].status).toBe('incorrect'); // RED!
+    expect(store().wordResults[1].expected).toBe('energy');
+    expect(store().wordResults[1].actual).toBe('energx');
     expect(store().correctWords).toBe(1);
     expect(store().incorrectWords).toBe(1);
-    expect(store().wordAccuracy).toBe(50); // 1 of 2
+    expect(store().totalWordsAttempted).toBe(2);
+    expect(store().wordAccuracy).toBe(50); // 1 of 2 = 50%
 
-    // 3. Type "brown" + Space
-    useSessionStore.getState().processKey('KeyB');
+    // Progression is NEVER blocked! Cursor automatically moves to "practice" (index 2)
+    expect(store().currentWordIndex).toBe(2);
+    expect(store().wordResults[2].status).toBe('active');
+    expect(store().currentWordBuffer).toBe('');
+
+    // 3. Type "practice" + Space
+    useSessionStore.getState().processKey('KeyP');
     useSessionStore.getState().processKey('KeyR');
-    useSessionStore.getState().processKey('KeyO');
-    useSessionStore.getState().processKey('KeyW');
-    useSessionStore.getState().processKey('KeyN');
+    useSessionStore.getState().processKey('KeyA');
+    useSessionStore.getState().processKey('KeyC');
+    useSessionStore.getState().processKey('KeyT');
+    useSessionStore.getState().processKey('KeyI');
+    useSessionStore.getState().processKey('KeyC');
+    useSessionStore.getState().processKey('KeyE');
+    expect(store().currentWordBuffer).toBe('practice');
     useSessionStore.getState().processKey('Space');
 
-    // "brown" must be GREEN (correct), cursor advances to word 3
-    expect(store().currentWordIndex).toBe(3);
+    // Word 2 turns GREEN
+    expect(store().wordResults[0].status).toBe('correct');
+    expect(store().wordResults[1].status).toBe('incorrect');
     expect(store().wordResults[2].status).toBe('correct');
     expect(store().correctWords).toBe(2);
     expect(store().incorrectWords).toBe(1);
+    expect(store().totalWordsAttempted).toBe(3);
+    expect(store().wordAccuracy).toBe(67); // 2 of 3 = 67%
 
-    // 4. Type "fox" (last word)
-    useSessionStore.getState().processKey('KeyF');
-    useSessionStore.getState().processKey('KeyO');
-    useSessionStore.getState().processKey('KeyX');
+    // Automatically moves to "rhythm" (index 3)
+    expect(store().currentWordIndex).toBe(3);
+    expect(store().wordResults[3].status).toBe('active');
 
-    // Auto-completes when final word is typed
+    // 4. Type "rhythm" + Space
+    useSessionStore.getState().processKey('KeyR');
+    useSessionStore.getState().processKey('KeyH');
+    useSessionStore.getState().processKey('KeyY');
+    useSessionStore.getState().processKey('KeyT');
+    useSessionStore.getState().processKey('KeyH');
+    useSessionStore.getState().processKey('KeyM');
+    expect(store().currentWordBuffer).toBe('rhythm');
+    useSessionStore.getState().processKey('Space');
+
+    // Word 3 turns GREEN
     expect(store().wordResults[3].status).toBe('correct');
     expect(store().correctWords).toBe(3);
     expect(store().incorrectWords).toBe(1);
-    expect(store().wordAccuracy).toBe(75); // 3 of 4 words = 75%
+    expect(store().totalWordsAttempted).toBe(4);
+    expect(store().wordAccuracy).toBe(75); // 3 of 4 = 75%
+
+    // Automatically moves to "motion" (index 4)
+    expect(store().currentWordIndex).toBe(4);
+    expect(store().wordResults[4].status).toBe('active');
+
+    // 5. Type "motion" (final word) - completes without requiring additional trailing space
+    useSessionStore.getState().processKey('KeyM');
+    useSessionStore.getState().processKey('KeyO');
+    useSessionStore.getState().processKey('KeyT');
+    useSessionStore.getState().processKey('KeyI');
+    useSessionStore.getState().processKey('KeyO');
+    useSessionStore.getState().processKey('KeyN');
+
+    expect(store().wordResults[4].status).toBe('correct');
+    expect(store().correctWords).toBe(4);
+    expect(store().incorrectWords).toBe(1);
+    expect(store().totalWordsAttempted).toBe(5);
+    expect(store().wordAccuracy).toBe(80); // 4 of 5 = 80%
     expect(store().status).toBe('completed');
   });
 
-  it('validates the complete Hindi InScript example: मेरा भारट सुंदर है', () => {
-    useSessionStore.getState().startLesson(hindiLesson, 0);
+  it('validates Hindi InScript with Unicode conjuncts and matras: मेरा नाम प्रेम है', () => {
+    useSessionStore.getState().startLesson(hindiPremLesson, 0);
     const store = useSessionStore.getState;
-    expect(store().words).toEqual(['मेरा', 'भारत', 'सुंदर', 'है']);
+    expect(store().words).toEqual(['मेरा', 'नाम', 'प्रेम', 'है']);
 
     // 1. Type "मेरा": म (KeyC) + े (KeyS) + र (KeyJ) + ा (KeyE) + Space
     useSessionStore.getState().processKey('KeyC');
@@ -192,45 +260,42 @@ describe('Word-Level Typing Session Workflow & Edge Cases', () => {
     useSessionStore.getState().processKey('Space');
 
     expect(store().wordResults[0].status).toBe('correct');
-    expect(store().wordResults[0].expected).toBe('मेरा');
     expect(store().currentWordIndex).toBe(1);
 
-    // 2. Type "भारट": भ (Shift+KeyY) + ा (KeyE) + र (KeyJ) + ट (Quote) + Space
-    useSessionStore.getState().processKey('KeyY', { shift: true });
+    // 2. Type "नाप" (mistake for "नाम"): न (KeyV) + ा (KeyE) + प (KeyH) + Space
+    useSessionStore.getState().processKey('KeyV');
     useSessionStore.getState().processKey('KeyE');
-    useSessionStore.getState().processKey('KeyJ');
-    useSessionStore.getState().processKey('Quote');
-    expect(store().currentWordBuffer).toBe('भारट');
+    useSessionStore.getState().processKey('KeyH');
+    expect(store().currentWordBuffer).toBe('नाप');
     useSessionStore.getState().processKey('Space');
 
-    // Entire word "भारत" must turn RED, cursor automatically moves to word 2
+    // Word 1 turns RED, cursor moves to word 2
     expect(store().wordResults[1].status).toBe('incorrect');
-    expect(store().wordResults[1].expected).toBe('भारत');
-    expect(store().wordResults[1].actual).toBe('भारट');
+    expect(store().wordResults[1].expected).toBe('नाम');
+    expect(store().wordResults[1].actual).toBe('नाप');
     expect(store().currentWordIndex).toBe(2);
 
-    // 3. Type "सुंदर": स (KeyM) + ु (KeyG) + ं (KeyX) + द (KeyO) + र (KeyJ) + Space
-    useSessionStore.getState().processKey('KeyM');
-    useSessionStore.getState().processKey('KeyG');
-    useSessionStore.getState().processKey('KeyX');
-    useSessionStore.getState().processKey('KeyO');
+    // 3. Type "प्रेम": प (KeyH) + ् (KeyD) + र (KeyJ) + े (KeyS) + म (KeyC) + Space
+    useSessionStore.getState().processKey('KeyH');
+    useSessionStore.getState().processKey('KeyD');
     useSessionStore.getState().processKey('KeyJ');
+    useSessionStore.getState().processKey('KeyS');
+    useSessionStore.getState().processKey('KeyC');
+    expect(store().currentWordBuffer).toBe('प्रेम');
     useSessionStore.getState().processKey('Space');
 
     expect(store().wordResults[2].status).toBe('correct');
-    expect(store().wordResults[2].expected).toBe('सुंदर');
     expect(store().currentWordIndex).toBe(3);
 
     // 4. Type "है": ह (KeyU) + ै (KeyW)
     useSessionStore.getState().processKey('KeyU');
     useSessionStore.getState().processKey('KeyW');
 
-    // Final word auto-validates
+    // Completes automatically without trailing space
     expect(store().wordResults[3].status).toBe('correct');
-    expect(store().wordResults[3].expected).toBe('है');
     expect(store().correctWords).toBe(3);
     expect(store().incorrectWords).toBe(1);
-    expect(store().wordAccuracy).toBe(75);
+    expect(store().wordAccuracy).toBe(75); // 3 of 4 = 75%
     expect(store().status).toBe('completed');
   });
 

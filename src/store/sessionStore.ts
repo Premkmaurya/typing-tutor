@@ -3,9 +3,6 @@ import { Language, ModifierState } from '../types/keyboard.types';
 import { TypingLesson } from '../types/lesson.types';
 import { SessionResult } from '../types/stats.types';
 import { SessionStatus, TypedCharacter, TypingInput, CharacterResult, WordResult } from '../types/typing.types';
-import { evaluateKeypress } from '../core/typing/matcher';
-import { calculateTypingMetrics } from '../core/typing/metrics';
-import { computeCharacterResults } from '../core/typing/characterStatus';
 import {
   extractWordsFromText,
   areWordsEqual,
@@ -131,7 +128,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const words = extracted.length > 0
       ? extracted
       : (lesson.steps?.map((s) => s.expectedOutput).join('').trim().split(/\s+/).filter(Boolean) || ['']);
-    const wordResults = initializeWordResults(words);
+    const wordResults = initializeWordResults(words, lesson.language);
 
     set({
       status: 'running',
@@ -213,20 +210,45 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // 1. Handle Backspace: remove last character from currentWordBuffer
     if (input.code === 'Backspace') {
       if (state.currentWordBuffer.length > 0) {
-        const chars = Array.from(state.currentWordBuffer);
-        chars.pop();
-        const newBuffer = chars.join('');
+        const currentWord = state.wordResults[state.currentWordIndex];
+        const characters = currentWord.characters.map((character) => ({ ...character }));
+        const lastTypedIndex = characters.findLastIndex(
+          (character) => character.status === 'correct' || character.status === 'incorrect'
+        );
+        if (lastTypedIndex < 0) return;
+        const removedCharacter = characters[lastTypedIndex];
+        characters[lastTypedIndex] = {
+          ...removedCharacter,
+          actual: '',
+          status: lastTypedIndex === 0 ? 'active' : 'pending',
+        };
+        const nextStepIndex = characters.findIndex(
+          (character) => character.status === 'pending' || character.status === 'active'
+        );
+        if (nextStepIndex >= 0) {
+          characters[nextStepIndex] = { ...characters[nextStepIndex], status: 'active' };
+        }
+        const newBuffer = characters
+          .filter((character) => character.status === 'correct' || character.status === 'incorrect')
+          .map((character) => character.actual)
+          .join('');
         const updatedWordResults = [...state.wordResults];
         if (updatedWordResults[state.currentWordIndex]) {
           updatedWordResults[state.currentWordIndex] = {
             ...updatedWordResults[state.currentWordIndex],
             actual: newBuffer,
+            errors: characters.filter((character) => character.status === 'incorrect').length,
+            characters,
           };
         }
         set({
           currentWordBuffer: newBuffer,
           wordResults: updatedWordResults,
+          currentStepIndex: nextStepIndex < 0 ? characters.length : nextStepIndex,
+          currentStepError: null,
           backspaceCount: state.backspaceCount + 1,
+          correctedErrors: state.correctedErrors +
+            (removedCharacter.status === 'incorrect' ? 1 : 0),
           totalKeypresses: state.totalKeypresses + 1,
           lastPressedCode: input.code,
           lastPressStatus: null,
@@ -235,13 +257,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return;
     }
 
-    // 2. Handle Space (or Enter): Finalize current word
+    // 2. Handle Space: Finalize current word
     const isSpace = input.code === 'Space' || input.key === ' ';
-    const isEnter = input.code === 'Enter' || input.key === 'Enter';
 
-    if (isSpace || isEnter) {
+    if (isSpace) {
       // Ignore accidental double space when buffer is empty to avoid skipping words
-      if (state.currentWordBuffer.length === 0) {
+      if (state.currentWordBuffer.trim().length === 0) {
         set({
           lastPressedCode: input.code,
           lastPressStatus: null,
@@ -260,6 +281,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         actual: state.currentWordBuffer,
         status: isCorrect ? 'correct' : 'incorrect',
         errors: wordErrors,
+        characters: updatedWordResults[state.currentWordIndex].characters,
       };
 
       const newAttemptedWords = state.totalWordsAttempted + 1;
@@ -268,8 +290,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const newWordAccuracy = Math.round((newCorrectWords / newAttemptedWords) * 100);
 
       const newTotalKeypresses = state.totalKeypresses + 1;
-      const newCorrectKeypresses = isCorrect ? state.correctKeypresses + state.currentWordBuffer.length : state.correctKeypresses;
-      const newIncorrectKeypresses = !isCorrect ? state.incorrectKeypresses + wordErrors : state.incorrectKeypresses;
+      const newCorrectKeypresses = state.correctKeypresses;
+      const newIncorrectKeypresses = state.incorrectKeypresses;
 
       const newWeakKeys = { ...state.weakKeysMap };
       if (!isCorrect) {
@@ -279,9 +301,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
       const nextWordIndex = state.currentWordIndex + 1;
       if (nextWordIndex < state.words.length) {
+        const nextWord = updatedWordResults[nextWordIndex];
         updatedWordResults[nextWordIndex] = {
-          ...updatedWordResults[nextWordIndex],
+          ...nextWord,
           status: 'active',
+          characters: nextWord.characters.map((character, characterIndex) => ({
+            ...character,
+            status: characterIndex === 0 ? 'active' : 'pending',
+          })),
         };
       }
 
@@ -296,6 +323,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         currentWordIndex: nextWordIndex,
         currentWordBuffer: '',
         wordResults: updatedWordResults,
+        currentStepIndex: 0,
+        currentStepError: null,
         totalWordsAttempted: newAttemptedWords,
         correctWords: newCorrectWords,
         incorrectWords: newIncorrectWords,
@@ -324,8 +353,43 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const newBuffer = state.currentWordBuffer + producedChar;
     const currentExpected = state.words[state.currentWordIndex];
     const updatedWordResults = [...state.wordResults];
+    const currentWordResult = updatedWordResults[state.currentWordIndex];
+    const typedStepIndex = currentWordResult.characters.findIndex(
+      (character) => character.status === 'pending' || character.status === 'active'
+    );
+    const expectedCharacter = currentWordResult.characters[typedStepIndex];
+    const isCharacterCorrect = Boolean(
+      expectedCharacter && expectedCharacter.expected.normalize('NFC') === producedChar.normalize('NFC')
+    );
+    const characters = currentWordResult.characters.map((character) => ({ ...character }));
+    if (expectedCharacter) {
+      characters[typedStepIndex] = {
+        ...expectedCharacter,
+        actual: producedChar,
+        status: isCharacterCorrect ? 'correct' : 'incorrect',
+      };
+      const nextStepIndex = characters.findIndex((character) => character.status === 'pending');
+      if (nextStepIndex >= 0) {
+        characters[nextStepIndex] = { ...characters[nextStepIndex], status: 'active' };
+      }
+    } else {
+      characters.push({
+        expected: '',
+        actual: producedChar,
+        status: 'incorrect',
+      });
+    }
+    const nextStepIndex = characters.findIndex(
+      (character) => character.status === 'pending' || character.status === 'active'
+    );
+    updatedWordResults[state.currentWordIndex] = {
+      ...currentWordResult,
+      actual: newBuffer,
+      errors: characters.filter((character) => character.status === 'incorrect').length,
+      characters,
+    };
 
-    // Check if on the last word and exact match is reached
+    // Check if on the last word and exact match is reached (no trailing space required)
     if (
       state.currentWordIndex === state.words.length - 1 &&
       areWordsEqual(newBuffer, currentExpected, state.language)
@@ -335,13 +399,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         actual: newBuffer,
         status: 'correct',
         errors: 0,
+        characters: characters.map((character) => ({
+          ...character,
+          status: character.status === 'active' ? 'pending' : character.status,
+        })),
       };
 
       const newAttemptedWords = state.totalWordsAttempted + 1;
       const newCorrectWords = state.correctWords + 1;
       const newWordAccuracy = Math.round((newCorrectWords / newAttemptedWords) * 100);
       const newTotalKeypresses = state.totalKeypresses + 1;
-      const newCorrectKeypresses = state.correctKeypresses + newBuffer.length;
+      const newCorrectKeypresses = state.correctKeypresses + (isCharacterCorrect ? 1 : 0);
 
       const effectiveMinutes = Math.max(state.elapsedSeconds / 60, 0.0167);
       const netChars = updatedWordResults
@@ -354,6 +422,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         currentWordIndex: state.words.length,
         currentWordBuffer: '',
         wordResults: updatedWordResults,
+        currentStepIndex: characters.length,
+        currentStepError: null,
         totalWordsAttempted: newAttemptedWords,
         correctWords: newCorrectWords,
         wordAccuracy: newWordAccuracy,
@@ -370,19 +440,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return;
     }
 
-    if (updatedWordResults[state.currentWordIndex]) {
-      updatedWordResults[state.currentWordIndex] = {
-        ...updatedWordResults[state.currentWordIndex],
-        actual: newBuffer,
-      };
-    }
-
     set({
       currentWordBuffer: newBuffer,
       wordResults: updatedWordResults,
+      currentStepIndex: nextStepIndex < 0 ? characters.length : nextStepIndex,
+      currentStepError: isCharacterCorrect ? null : producedChar,
       totalKeypresses: state.totalKeypresses + 1,
+      correctKeypresses: state.correctKeypresses + (isCharacterCorrect ? 1 : 0),
+      incorrectKeypresses: state.incorrectKeypresses + (isCharacterCorrect ? 0 : 1),
       lastPressedCode: input.code,
-      lastPressStatus: null,
+      lastPressStatus: isCharacterCorrect ? 'correct' : 'incorrect',
     });
   },
 
@@ -486,6 +553,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         actual: state.currentWordBuffer,
         status: isCorrect ? 'correct' : 'incorrect',
         errors,
+        characters: finalWordResults[state.currentWordIndex].characters,
       };
 
       finalAttemptedWords += 1;
@@ -560,13 +628,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   getCharacterResults: () => {
     const state = get();
-    if (!state.lesson) return [];
-    return computeCharacterResults(
-      state.lesson.steps,
-      state.currentStepIndex,
-      state.currentStepError,
-      state.typedChars
-    );
+    const wordIndex = Math.min(state.currentWordIndex, state.wordResults.length - 1);
+    return state.wordResults[wordIndex]?.characters ?? [];
   },
 
   getWordResults: () => {

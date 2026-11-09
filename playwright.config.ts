@@ -7,7 +7,6 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:5173',
-    channel: 'chrome',
     trace: 'on-first-retry',
   },
   projects: [
@@ -15,7 +14,6 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        channel: 'chrome',
       },
     },
   ],

@@ -42,14 +42,14 @@ export function computeCharacterResults(
       }
       return {
         expected: step.expectedOutput,
-        actual: undefined,
+        actual: '',
         status: 'active',
       };
     }
 
     return {
       expected: step.expectedOutput,
-      actual: undefined,
+      actual: '',
       status: 'pending',
     };
   });
