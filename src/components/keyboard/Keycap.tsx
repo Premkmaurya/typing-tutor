@@ -22,7 +22,7 @@ const COMPACT_LABELS: Record<string, string> = {
   Ctrl: 'Ctl',
   Alt: 'Alt',
   AltGr: 'Alt',
-  Space: 'Space',
+  Space: '␣',
 };
 
 export const Keycap: React.FC<KeycapProps> = ({
@@ -133,19 +133,19 @@ export const Keycap: React.FC<KeycapProps> = ({
       type="button"
       onClick={() => onClick(code)}
       style={flexStyle}
-      className={`relative ${heightClass} min-w-0 m-[0.5px] sm:m-[1.5px] rounded border flex flex-col justify-between px-0.5 sm:px-1 py-0.5 select-none transition-all duration-75 cursor-pointer text-left focus:outline-none ${fingerBorder ? `border-b-[2px] ${fingerBorder}` : ''} ${stateClasses}`}
+      className={`relative ${heightClass} min-w-0 m-[0.5px] sm:m-[1.5px] rounded border flex flex-col justify-between px-0.5 sm:px-1 py-0.5 select-none transition-all duration-75 cursor-pointer text-left focus:outline-none touch-manipulation active:scale-[0.98] ${fingerBorder ? `border-b-[2px] ${fingerBorder}` : ''} ${stateClasses}`}
       aria-label={`${displayLabel || code}: ${primaryChar || code}`}
       title={`${code} (${language === 'hi' ? `Hindi: ${primaryChar}` : `English: ${primaryChar}`})`}
     >
       {isSpecialKey ? (
-        <div className="w-full h-full flex items-center justify-center font-medium text-[8px] sm:text-[10.5px] text-center leading-tight truncate px-0.5">
+        <div className="w-full h-full flex items-center justify-center font-medium text-[7.5px] xs:text-[8.5px] sm:text-[10.5px] text-center leading-tight truncate px-0.5">
           <span className="sm:hidden">{compactLabelText}</span>
           <span className="hidden sm:inline">{specialLabelText}</span>
         </div>
       ) : (
         <>
-          {/* Top Row: secondary character & shifted preview */}
-          <div className="flex items-center justify-between w-full text-[7px] sm:text-[9px] leading-none opacity-60 font-mono truncate">
+          {/* Top Row: secondary character & shifted preview (visible on tablets/desktops to prevent mobile overflow) */}
+          <div className="hidden sm:flex items-center justify-between w-full text-[7px] sm:text-[9px] leading-none opacity-60 font-mono truncate">
             <span className="truncate">{secondaryChar}</span>
             {language === 'en' && hindi.normal && (
               <span className="font-hindi text-[7px] sm:text-[9.5px] font-normal opacity-75 truncate">
@@ -164,8 +164,8 @@ export const Keycap: React.FC<KeycapProps> = ({
             <span
               className={`leading-none ${
                 language === 'hi'
-                  ? 'font-hindi text-[11px] sm:text-[14px] font-semibold'
-                  : 'font-sans text-[10px] sm:text-[13px] font-bold'
+                  ? 'font-hindi text-[10.5px] xs:text-[12px] sm:text-[14px] font-semibold'
+                  : 'font-sans text-[9.5px] xs:text-[11px] sm:text-[13px] font-bold'
               }`}
             >
               {primaryChar}

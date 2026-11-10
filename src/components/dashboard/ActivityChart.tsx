@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -14,23 +14,26 @@ interface ActivityChartProps {
 
 export const ActivityChart: React.FC<ActivityChartProps> = ({ dailyPracticeTime }) => {
   // Generate last 7 days
-  const data = [];
-  const today = new Date();
+  const data = useMemo(() => {
+    const list = [];
+    const today = new Date();
 
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(today.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
-    const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
-    const seconds = dailyPracticeTime[dateStr] || 0;
-    const minutes = Math.round((seconds / 60) * 10) / 10;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const seconds = dailyPracticeTime[dateStr] || 0;
+      const minutes = Math.round((seconds / 60) * 10) / 10;
 
-    data.push({
-      date: dateStr,
-      day: dayLabel,
-      minutes,
-    });
-  }
+      list.push({
+        date: dateStr,
+        day: dayLabel,
+        minutes,
+      });
+    }
+    return list;
+  }, [dailyPracticeTime]);
 
   const hasActivity = data.some((d) => d.minutes > 0);
 

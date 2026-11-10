@@ -28,7 +28,7 @@ export const KeyboardRow: React.FC<KeyboardRowProps> = ({
   fingerGuideEnabled,
 }) => {
   return (
-    <div className="flex w-full justify-center">
+    <div className="flex w-full min-w-0 justify-center">
       {row.map((mapping) => {
         const { code } = mapping;
         let state: KeyState = 'default';

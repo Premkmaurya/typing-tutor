@@ -26,7 +26,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
   const { highlightHands } = useSettingsStore();
 
   return (
-    <div className="w-full bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-lg p-1.5 sm:p-2 shadow-xs backdrop-blur-sm">
+    <div className="w-full max-w-full bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-lg p-1 sm:p-2 shadow-xs backdrop-blur-sm">
       {/* Keyboard Header Controls & Layout Indicator */}
       <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 dark:border-slate-800 text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-1.5">
@@ -57,8 +57,8 @@ export const Keyboard: React.FC<KeyboardProps> = ({
       </div>
 
       {/* Responsive Fluid Keyboard Container */}
-      <div className="w-full overflow-hidden pb-0.5">
-        <div className="w-full flex flex-col gap-[2px] sm:gap-1">
+      <div className="w-full max-w-full overflow-x-auto sm:overflow-x-visible pb-0.5 scrollbar-thin">
+        <div className="w-full min-w-0 flex flex-col gap-[1px] sm:gap-1">
           {ENGLISH_KEYBOARD_ROWS.map((row, idx) => (
             <KeyboardRow
               key={idx}

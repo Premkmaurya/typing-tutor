@@ -9,11 +9,11 @@ export const Layout: React.FC = () => {
   return (
     <div
       className={`min-h-screen ${
-        isPractice ? 'min-h-[100dvh]' : ''
+        isPractice ? 'h-[100dvh] max-h-[100dvh]' : ''
       } flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors`}
     >
       <Header />
-      <main className="flex-1 flex flex-col justify-start">
+      <main className="flex-1 flex flex-col justify-start min-h-0 overflow-y-auto">
         <Outlet />
       </main>
       {!isPractice && (

@@ -225,7 +225,7 @@ export const PracticePage: React.FC = () => {
   const nextExpectedModifiers = nextKeyInfo.modifiers;
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-2.5 sm:py-4 flex flex-col justify-start gap-2.5 sm:gap-3.5 flex-1">
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-2.5 sm:py-4 flex flex-col justify-between gap-3 sm:gap-4 flex-1">
       {/* Lesson Header & Metadata */}
       <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2 flex-wrap min-w-0">

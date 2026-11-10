@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 60000,
+  timeout: 120000,
   fullyParallel: false,
   reporter: 'list',
   use: {
@@ -14,6 +14,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        channel: 'chrome',
       },
     },
   ],

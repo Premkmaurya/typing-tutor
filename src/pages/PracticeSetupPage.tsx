@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Language } from '../types/keyboard.types';
-import { Difficulty, PracticeType, TypingLesson } from '../types/lesson.types';
+import { Difficulty, PracticeType } from '../types/lesson.types';
 import { getLessonsByLanguageAndDifficulty } from '../data/lessons';
 import { useSessionStore } from '../store/sessionStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -10,8 +10,6 @@ import { Badge } from '../components/common/Badge';
 import {
   Play,
   Clock,
-  BookOpen,
-  Keyboard,
   CheckCircle2,
 } from 'lucide-react';
 

@@ -50,7 +50,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       onClick={() => containerRef.current?.focus()}
       onKeyDown={onKeyDown}
       onKeyUp={onKeyUp}
-      className="relative w-full min-h-[110px] sm:min-h-[135px] p-3.5 sm:p-5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-text transition-all select-none flex flex-col justify-between"
+      className="relative w-full min-h-[140px] sm:min-h-[180px] lg:min-h-[200px] p-4 sm:p-6 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-text transition-all select-none flex flex-col justify-between"
       aria-label="Typing practice input area. Press any key to type."
     >
       {/* Paused Overlay */}
@@ -64,10 +64,10 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       {/* Target Passage rendered at WORD level */}
       <div
         data-testid="typing-passage"
-        className={`leading-relaxed tracking-wide flex flex-wrap gap-x-2.5 gap-y-2 items-baseline select-none ${
+        className={`leading-relaxed tracking-wide flex flex-wrap gap-x-2.5 sm:gap-x-3.5 gap-y-2 sm:gap-y-3 items-baseline select-none ${
           isHindi
-            ? 'font-hindi text-xl sm:text-2xl'
-            : 'font-mono text-base sm:text-lg'
+            ? 'font-hindi text-xl sm:text-2xl md:text-3xl leading-[2.2rem] sm:leading-[2.8rem]'
+            : 'font-mono text-base sm:text-xl md:text-2xl leading-relaxed'
         }`}
       >
         {wordResults.map((wordResult, idx) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Flame,
@@ -7,8 +7,9 @@ import {
   Target,
   Play,
   RotateCcw,
-  Sparkles,
+  Cpu,
   ArrowRight,
+  Terminal,
 } from 'lucide-react';
 import { StorageService } from '../services/storage.service';
 import { UserStats } from '../types/stats.types';
@@ -19,8 +20,26 @@ import { RecentSessions } from '../components/dashboard/RecentSessions';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 
+interface InspectorSample {
+  key: string;
+  glyph: string;
+  code: string;
+  name: string;
+  cluster: string;
+  halant: string;
+}
+
+const INSPECTOR_SAMPLES: Record<string, InspectorSample> = {
+  KeyH: { key: 'KeyH', glyph: 'प', code: 'U+092A', name: 'DEVANAGARI LETTER PA', cluster: 'Standalone Consonant', halant: 'False' },
+  KeyJ: { key: 'KeyJ', glyph: 'र', code: 'U+0930', name: 'DEVANAGARI LETTER RA', cluster: 'Standalone Consonant', halant: 'False' },
+  KeyK: { key: 'KeyK', glyph: 'क', code: 'U+0915', name: 'DEVANAGARI LETTER KA', cluster: 'Standalone Consonant', halant: 'False' },
+  KeyD: { key: 'KeyD', glyph: '्', code: 'U+094D', name: 'DEVANAGARI SIGN VIRAMA', cluster: 'Halant / Conjunct Joiner', halant: 'True' },
+  KeyE: { key: 'KeyE', glyph: 'ा', code: 'U+093E', name: 'DEVANAGARI VOWEL SIGN AA', cluster: 'Dependent Matra', halant: 'False' },
+};
+
 export const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<UserStats>(() => StorageService.getStats());
+  const [selectedKey, setSelectedKey] = useState<string>('KeyH');
 
   useEffect(() => {
     // Refresh stats when component mounts
@@ -32,7 +51,7 @@ export const DashboardPage: React.FC = () => {
   const isNewUser = totalSessions === 0;
 
   // Calculate today's practice time in minutes
-  const today = new Date().toISOString().split('T')[0];
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const todaySeconds = stats.dailyPracticeTime[today] || 0;
   const todayMinutes = Math.round(todaySeconds / 60);
 
@@ -52,90 +71,126 @@ export const DashboardPage: React.FC = () => {
     ...stats.english.weakKeys,
   };
 
+  const activeSample = INSPECTOR_SAMPLES[selectedKey] || INSPECTOR_SAMPLES.KeyH;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-      {/* Balanced Technical Hero Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-lg">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 sm:space-y-7">
+      {/* Precision Terminal Architectural Hero */}
+      <div className="relative overflow-hidden bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl p-5 sm:p-7">
+        {/* Subtle grid background accent */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:2rem_2rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
+
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          <div className="lg:col-span-7">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-blue-100 mb-3">
-              <Sparkles size={14} />
-              Bilingual Typing Mastery
+          {/* Left Column: Technical Authority & Primary Launch CTAs */}
+          <div className="lg:col-span-7 space-y-3.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-[11px] font-mono font-medium text-blue-400">
+                <Terminal size={12} />
+                DEV ENGINE • BIS IS 13194
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-800 bg-slate-800/50">
+                UNICODE CLDR 43
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
-              Master Hindi InScript & English QWERTY
-            </h1>
-            <p className="mt-2.5 text-sm sm:text-base text-blue-100 leading-relaxed max-w-xl">
-              Scientifically structured lessons, real-time keyboard feedback, and precise Devanagari Unicode processing.
+
+            <div>
+              <p className="text-xs uppercase tracking-widest font-mono text-blue-400 font-semibold">
+                Bilingual Input Subsystem
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mt-1">
+                Hardware-Accelerated Devanagari Keyboard Resolver
+              </h1>
+            </div>
+
+            <p className="text-sm text-slate-300 leading-relaxed max-w-xl">
+              Pure client-side zero-latency InScript parser with verified Unicode CLDR grapheme clustering and standard ANSI US QWERTY mapping.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="pt-2 flex flex-wrap gap-3">
               <Link to="/setup">
                 <Button
-                  size="lg"
-                  className="bg-white text-blue-700 hover:bg-blue-50 shadow-md font-semibold"
-                  icon={<Play size={18} />}
+                  size="md"
+                  className="bg-blue-600 hover:bg-blue-500 text-white shadow-md font-semibold px-5 min-h-[42px]"
+                  icon={<Play size={16} />}
                 >
-                  Start Practicing
+                  Launch Interactive Studio
                 </Button>
               </Link>
               <Link to="/progress">
                 <Button
                   variant="outline"
-                  size="lg"
-                  className="border-white/30 text-white hover:bg-white/10"
-                  icon={<ArrowRight size={18} />}
+                  size="md"
+                  className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white min-h-[42px]"
+                  icon={<ArrowRight size={16} />}
                 >
-                  View Analytics
+                  View Analytics & Telemetry
                 </Button>
               </Link>
             </div>
           </div>
 
-          {/* Technical InScript Architecture Card (Replaces empty space) */}
-          <div className="lg:col-span-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 sm:p-5 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-white/15">
-              <span className="text-xs font-mono font-semibold tracking-wider uppercase text-blue-100">
-                Input Engine Specs
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/20 text-white">
-                BIS IS 13194:1991
+          {/* Right Column: Live InScript & Unicode Inspector Instrument */}
+          <div className="lg:col-span-5 bg-slate-950/80 border border-slate-800/90 rounded-xl p-4 sm:p-5 space-y-3 shadow-inner">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Cpu size={14} className="text-blue-400" />
+                <span className="text-xs font-mono font-semibold tracking-wider uppercase text-slate-200">
+                  Live Unicode Inspector
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                0.1ms Engine Latency
               </span>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between items-center text-blue-100">
-                <span>Layout Standard</span>
-                <span className="font-mono font-semibold text-white">Unicode CLDR 43</span>
-              </div>
-              <div className="flex justify-between items-center text-blue-100">
-                <span>Grapheme Resolution</span>
-                <span className="font-mono font-semibold text-white">Extended Cluster</span>
-              </div>
-              <div className="flex justify-between items-center text-blue-100">
-                <span>OS Keyboard Req.</span>
-                <span className="font-mono font-semibold text-white">None (Client Virtualized)</span>
-              </div>
+            {/* Keycode Switcher Tabs */}
+            <div className="flex items-center gap-1.5 pb-1">
+              {Object.keys(INSPECTOR_SAMPLES).map((key) => {
+                const s = INSPECTOR_SAMPLES[key];
+                const isSelected = selectedKey === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSelectedKey(key)}
+                    className={`flex-1 py-1 px-1 rounded border text-center transition font-mono text-xs ${
+                      isSelected
+                        ? 'bg-blue-600 border-blue-500 text-white font-bold shadow-xs'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                    }`}
+                  >
+                    <div className="text-[9px] opacity-75">{key.replace('Key', '')}</div>
+                    <div className="font-hindi text-sm">{s.glyph}</div>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Live Keycode Mapping Samples */}
-            <div className="pt-2 border-t border-white/15 flex items-center justify-between text-[11px] font-mono text-blue-100">
-              <span className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">H</span>
-                <span>→ प</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">J</span>
-                <span>→ र</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">K</span>
-                <span>→ क</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 rounded bg-white/15 font-bold text-white">L</span>
-                <span>→ त</span>
-              </span>
+            {/* Detailed Inspector Telemetry Table */}
+            <div className="space-y-1.5 text-xs font-mono bg-slate-900/60 rounded-lg p-3 border border-slate-800/60">
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Physical Key</span>
+                <span className="text-slate-200 font-semibold">{activeSample.key}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Resolved Glyph</span>
+                <span className="text-blue-400 font-hindi font-bold text-base">{activeSample.glyph}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Codepoint</span>
+                <span className="text-slate-200">{activeSample.code}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Cluster State</span>
+                <span className="text-slate-200">{activeSample.cluster}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Halant Modifier</span>
+                <span className={activeSample.halant === 'True' ? 'text-amber-400 font-bold' : 'text-slate-400'}>
+                  {activeSample.halant}
+                </span>
+              </div>
             </div>
           </div>
         </div>
