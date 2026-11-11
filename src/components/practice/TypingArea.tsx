@@ -27,6 +27,8 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
   onKeyUp,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const passageRef = useRef<HTMLDivElement>(null);
+  const activeWordRef = useRef<HTMLSpanElement>(null);
 
   // Auto-focus container when practice starts
   useEffect(() => {
@@ -34,6 +36,26 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       containerRef.current.focus();
     }
   }, [status]);
+
+  useEffect(() => {
+    const passage = passageRef.current;
+    const activeWord = activeWordRef.current;
+    if (!passage || !activeWord || passage.clientHeight === 0) return;
+
+    const passageRect = passage.getBoundingClientRect();
+    const wordRect = activeWord.getBoundingClientRect();
+    const wordTop = wordRect.top - passageRect.top + passage.scrollTop;
+    const wordBottom = wordRect.bottom - passageRect.top + passage.scrollTop;
+    const lineHeight = Number.parseFloat(window.getComputedStyle(passage).lineHeight) || 24;
+    const viewportTop = passage.scrollTop;
+    const viewportBottom = viewportTop + passage.clientHeight;
+
+    if (wordTop < viewportTop + lineHeight) {
+      passage.scrollTop = Math.max(0, wordTop - lineHeight);
+    } else if (wordBottom > viewportBottom - lineHeight) {
+      passage.scrollTop = wordBottom - passage.clientHeight + lineHeight;
+    }
+  }, [currentWordIndex, currentWordBuffer, lesson.id, status]);
 
   const { language, targetText } = lesson;
   const isHindi = language === 'hi';
@@ -50,7 +72,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
       onClick={() => containerRef.current?.focus()}
       onKeyDown={onKeyDown}
       onKeyUp={onKeyUp}
-      className="relative w-full min-h-[140px] sm:min-h-[180px] lg:min-h-[200px] p-4 sm:p-6 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-text transition-all select-none flex flex-col justify-between"
+      className="relative w-full max-w-4xl mx-auto min-h-[140px] sm:min-h-[180px] lg:min-h-[200px] p-4 sm:p-6 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 cursor-text transition-all select-none flex flex-col justify-between"
       aria-label="Typing practice input area. Press any key to type."
     >
       {/* Paused Overlay */}
@@ -63,8 +85,9 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
 
       {/* Target Passage rendered at WORD level */}
       <div
+        ref={passageRef}
         data-testid="typing-passage"
-        className={`leading-relaxed tracking-wide flex flex-wrap gap-x-2.5 sm:gap-x-3.5 gap-y-2 sm:gap-y-3 items-baseline select-none ${
+        className={`max-h-32 sm:max-h-40 md:max-h-48 overflow-hidden leading-relaxed tracking-wide flex flex-wrap gap-x-2.5 sm:gap-x-3.5 gap-y-2 sm:gap-y-3 items-baseline select-none ${
           isHindi
             ? 'font-hindi text-xl sm:text-2xl md:text-3xl leading-[2.2rem] sm:leading-[2.8rem]'
             : 'font-mono text-base sm:text-xl md:text-2xl leading-relaxed'
@@ -155,6 +178,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
           return (
             <span
               key={idx}
+              ref={isCurrent ? activeWordRef : null}
               data-testid={`word-${idx}`}
               data-status={wordResult.status}
               data-expected={wordResult.expected}

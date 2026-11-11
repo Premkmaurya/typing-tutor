@@ -20,6 +20,9 @@ export const PracticePage: React.FC = () => {
     lesson,
     language,
     durationMinutes,
+    passageQueue,
+    currentPassageIndex,
+    completedPassages,
     words,
     currentWordIndex,
     currentWordBuffer,
@@ -37,10 +40,11 @@ export const PracticePage: React.FC = () => {
     startLesson,
     processInput,
     setModifiers,
-    tickTimer,
+    syncTimers,
     pauseSession,
     resumeSession,
     restartSession,
+    finishSession,
   } = useSessionStore();
 
   const { soundEnabled, virtualKeyboardVisible } = useSettingsStore();
@@ -59,19 +63,35 @@ export const PracticePage: React.FC = () => {
     if (status === 'completed') {
       const timer = setTimeout(() => {
         navigate('/results');
-      }, 600);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [status, navigate]);
 
-  // Run timer tick every 1000ms while running
+  // Timestamp-based reliable timer: run tick every 250ms while running
   useEffect(() => {
     if (status !== 'running') return;
+    syncTimers();
     const interval = setInterval(() => {
-      tickTimer();
-    }, 1000);
+      syncTimers();
+    }, 250);
     return () => clearInterval(interval);
-  }, [status, tickTimer]);
+  }, [status, syncTimers]);
+
+  // Sync timers immediately on tab visibility change or window focus
+  useEffect(() => {
+    const handleSync = () => {
+      if (useSessionStore.getState().status === 'running') {
+        syncTimers();
+      }
+    };
+    document.addEventListener('visibilitychange', handleSync);
+    window.addEventListener('focus', handleSync);
+    return () => {
+      document.removeEventListener('visibilitychange', handleSync);
+      window.removeEventListener('focus', handleSync);
+    };
+  }, [syncTimers]);
 
   // Handle Physical Keyboard Events
   const handleKeyDown = useCallback(
@@ -125,7 +145,6 @@ export const PracticePage: React.FC = () => {
 
       // Trigger audio feedback
       if (soundEnabled) {
-        // If incorrect count increased, play mistake sound
         const isError = useSessionStore.getState().incorrectKeypresses > prevIncorrect;
         playKeySound(isError ? 'incorrect' : 'correct');
       }
@@ -146,7 +165,6 @@ export const PracticePage: React.FC = () => {
   // Global single listener for keyboard events during active practice
   useEffect(() => {
     const onWindowKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in an input or selecting another interactive button
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -176,7 +194,6 @@ export const PracticePage: React.FC = () => {
   const handleVirtualKeyClick = (code: string) => {
     if (status !== 'running' || !lesson) return;
 
-    // Handle modifier toggles on virtual keyboard
     if (code === 'ShiftLeft' || code === 'ShiftRight') {
       setModifiers({ shift: !activeModifiers.shift });
       return;
@@ -199,7 +216,6 @@ export const PracticePage: React.FC = () => {
       playKeySound(isError ? 'incorrect' : 'correct');
     }
 
-    // Auto-release shift and altGr after virtual keypress if not caps lock
     if (activeModifiers.shift || activeModifiers.altGr) {
       setModifiers({ shift: false, altGr: false });
     }
@@ -224,6 +240,8 @@ export const PracticePage: React.FC = () => {
   const nextExpectedCode = nextKeyInfo.code;
   const nextExpectedModifiers = nextKeyInfo.modifiers;
 
+  const totalPassagesCount = Math.max(passageQueue.length, currentPassageIndex + 1);
+
   return (
     <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-2.5 sm:py-4 flex flex-col justify-between gap-3 sm:gap-4 flex-1">
       {/* Lesson Header & Metadata */}
@@ -236,9 +254,17 @@ export const PracticePage: React.FC = () => {
             {lesson.language === 'hi' ? 'Hindi InScript' : 'English QWERTY'}
           </Badge>
           <Badge variant="amber">{lesson.difficulty}</Badge>
+          <Badge variant="green">
+            Passage {currentPassageIndex + 1} of {totalPassagesCount}
+          </Badge>
+          {completedPassages.length > 0 && (
+            <span className="text-xs text-slate-400 font-medium">
+              ({completedPassages.length} finished)
+            </span>
+          )}
         </div>
 
-        {/* Lesson Progress Percentage */}
+        {/* Current Passage Progress Percentage */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="w-20 sm:w-32 bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
             <div
@@ -251,10 +277,7 @@ export const PracticePage: React.FC = () => {
             />
           </div>
           <span className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300">
-            {Math.round(
-              (currentWordIndex / Math.max(1, words.length)) * 100
-            )}
-            %
+            {Math.round((currentWordIndex / Math.max(1, words.length)) * 100)}%
           </span>
         </div>
       </div>
@@ -281,12 +304,13 @@ export const PracticePage: React.FC = () => {
         status={status}
       />
 
-      {/* Controls: Restart, Pause, Change Lesson, Keyboard Toggle */}
+      {/* Controls: Restart, Pause, Finish, Change Lesson, Keyboard Toggle */}
       <PracticeControls
         status={status}
         onPause={pauseSession}
         onResume={resumeSession}
         onRestart={restartSession}
+        onFinish={finishSession}
         onChangeLesson={() => navigate('/setup')}
       />
 

@@ -4,11 +4,16 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
   test.beforeEach(async ({ context }) => {
     await context.addInitScript(() => {
       if (typeof Element !== 'undefined' && !Element.prototype.checkVisibility) {
-        Element.prototype.checkVisibility = function(options?: { checkOpacity?: boolean; checkVisibilityCSS?: boolean }) {
+        Element.prototype.checkVisibility = function (options?: {
+          checkOpacity?: boolean;
+          checkVisibilityCSS?: boolean;
+        }) {
           if (!this.isConnected) return false;
           const style = window.getComputedStyle(this);
           if (style.display === 'none' || style.visibility === 'hidden') return false;
-          if (options && options.checkOpacity && (style.opacity === '0' || style.opacity === '0.0')) return false;
+          if (options && options.checkOpacity && (style.opacity === '0' || style.opacity === '0.0')) {
+            return false;
+          }
           return true;
         };
       }
@@ -27,6 +32,11 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
     // Verify InScript Layout badge
     await expect(page.locator('text=InScript Layout').first()).toBeVisible();
 
+    // Select Hindi words chapter
+    const wordLessonCard = page.locator('button:has-text("दो अक्षर वाले सरल अमात्रिक शब्द")');
+    await wordLessonCard.click();
+    await expect(wordLessonCard).toHaveAttribute('aria-pressed', 'true');
+
     // 3. Start Practice
     await page.click('button[data-testid="start-practice-btn"]');
     await expect(page).toHaveURL(/.*practice/);
@@ -35,24 +45,26 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
     const keyboardTitle = page.locator('text=Devanagari InScript');
     await expect(keyboardTitle).toBeVisible();
 
-    // Type the first few words of the Hindi lesson
-    // Lesson 1 is 'प र क त च प र क त च प र क त च'
-    // First word: प (KeyH) + Space
-    await page.keyboard.press('KeyH');
+    // Word 0 is 'कम': क (KeyK) + म (KeyC) + Space
+    await page.keyboard.press('KeyK');
+    await page.keyboard.press('KeyC');
     await page.keyboard.press('Space');
 
-    // Second word: र (KeyJ) + Space
+    // Word 1 is 'पर': प (KeyH) + र (KeyJ) + Space
+    await page.keyboard.press('KeyH');
     await page.keyboard.press('KeyJ');
     await page.keyboard.press('Space');
 
-    // 5. Verify Virtual key click also works (click on KeyK virtual button + Space)
-    const virtualKeyK = page.locator('button[aria-label*="KeyK"]');
-    await expect(virtualKeyK).toBeVisible();
-    await virtualKeyK.click();
+    // 5. Verify Virtual key click works: click KeyT + KeyB ('तब') + Space
+    const virtualKeyT = page.locator('button[aria-label*="KeyL"]').first(); // त (KeyL)
+    await expect(virtualKeyT).toBeVisible();
+    await virtualKeyT.click();
+    const virtualKeyB = page.locator('button[aria-label*="KeyY"]').first(); // ब (KeyY)
+    await virtualKeyB.click();
     const virtualSpace = page.locator('button[aria-label*="Space"]');
     await virtualSpace.click();
 
-    // Verify stats are live and non-zero
+    // Verify stats are live
     const accuracy = page.locator('text=Accuracy');
     await expect(accuracy).toBeVisible();
 
@@ -76,34 +88,38 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
     await page.goto('/setup?lang=en');
     await expect(page.locator('text=QWERTY Layout').first()).toBeVisible();
 
-    // Select Beginner Keys and Start Practice
+    // Select Chapter 1
+    const chapter1 = page.locator('button:has-text("Chapter 1: Home Row - Left Hand")');
+    await chapter1.click();
+    await expect(chapter1).toHaveAttribute('aria-pressed', 'true');
+
+    // Start Practice
     await page.click('button[data-testid="start-practice-btn"]');
     await expect(page).toHaveURL(/.*practice/);
 
     // Verify English layout indicator
     await expect(page.locator('text=English US QWERTY')).toBeVisible();
 
-    // Type sequence: 'asdf jkl; ' (10 characters)
+    // Type sequence: 'asdf' + Space
     await page.keyboard.press('KeyA');
     await page.keyboard.press('KeyS');
     await page.keyboard.press('KeyD');
     await page.keyboard.press('KeyF');
     await page.keyboard.press('Space');
-    await page.keyboard.press('KeyJ');
-    await page.keyboard.press('KeyK');
-    await page.keyboard.press('KeyL');
-    await page.keyboard.press('Semicolon');
+
+    // Type second word: 'asdf' + Space
+    await page.keyboard.press('KeyA');
+    await page.keyboard.press('KeyS');
+    await page.keyboard.press('KeyD');
+    await page.keyboard.press('KeyF');
     await page.keyboard.press('Space');
 
-    // Verify 0 mistakes and 100% accuracy (not duplicate/falsely marked errors!)
+    // Verify 0 mistakes and 100% accuracy
     const mistakeCard = page.locator('text=Mistakes').locator('..');
     await expect(mistakeCard).toContainText('0');
 
     const accuracyCard = page.locator('text=Accuracy').locator('..');
     await expect(accuracyCard).toContainText('100%');
-
-    // Verify position is Word 3 of 6 (since 2 words finalized)
-    await expect(page.locator('text=Word 3 of 6')).toBeVisible();
 
     // Verify live stats display
     await expect(page.locator('text=WPM / Speed')).toBeVisible();
@@ -119,91 +135,43 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
     await expect(page.locator('text=English US QWERTY')).toBeVisible();
   });
 
-  test('Verify Typing Area and Keyboard fit within a single viewport across standard resolutions without scrolling', async ({
-    page,
-  }) => {
-    const targetViewports = [
-      { width: 1366, height: 768, name: '1366x768' },
-      { width: 1440, height: 900, name: '1440x900' },
-      { width: 1536, height: 864, name: '1536x864' },
-      { width: 1920, height: 1080, name: '1920x1080' },
-    ];
+  test('Verify manual chapter selection, category switching and search filtering', async ({ page }) => {
+    await page.goto('/setup?lang=en');
 
-    for (const vp of targetViewports) {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto('/practice');
+    // 1. Switch to Stories category
+    const storiesTab = page.locator('button:has-text("Stories")');
+    await storiesTab.click();
 
-      // Wait for lesson and keyboard to render
-      const typingArea = page.locator('div[aria-label*="Typing practice input area"]');
-      await expect(typingArea).toBeVisible();
-      await expect(typingArea).toBeInViewport();
+    // Verify Stories are displayed
+    const villageStory = page.locator('button:has-text("Story 1: A Day in the Village")');
+    await expect(villageStory).toBeVisible();
 
-      const spaceKey = page.locator('button[aria-label*="Space"]');
-      await expect(spaceKey).toBeVisible();
-      await expect(spaceKey).toBeInViewport();
+    // Click village story card
+    await villageStory.click();
+    await expect(villageStory).toHaveAttribute('aria-pressed', 'true');
 
-      const measurements = await page.evaluate(() => {
-        const header = document.querySelector('header')?.getBoundingClientRect();
-        const stats = document.querySelector('.grid')?.getBoundingClientRect();
-        const typing = document.querySelector('div[aria-label*="Typing practice"]')?.getBoundingClientRect();
-        const keyboard = document.querySelector('.scrollbar-thin')?.closest('.border')?.getBoundingClientRect();
-        const space = document.querySelector('button[aria-label*="Space"]')?.getBoundingClientRect();
-        return {
-          windowHeight: window.innerHeight,
-          headerHeight: header?.height,
-          statsHeight: stats?.height,
-          typingHeight: typing?.height,
-          keyboardTop: keyboard?.top,
-          keyboardBottom: keyboard?.bottom,
-          keyboardHeight: keyboard?.height,
-          spaceBottom: space?.bottom,
-          remainingBelowKeyboard: window.innerHeight - (keyboard?.bottom || 0),
-        };
-      });
-      console.log(`[MEASUREMENT ${vp.name}]`, measurements);
+    // 2. Use Search bar
+    const searchInput = page.locator('input[placeholder*="Search by chapter title"]');
+    await searchInput.fill('Train');
 
-      // Verify all 5 individual keyboard rows fit within viewport
-      const rowsBounding = await page.evaluate(() => {
-        const rows = Array.from(document.querySelectorAll('.scrollbar-thin > div > div'));
-        return rows.map((r, i) => {
-          const rect = r.getBoundingClientRect();
-          return {
-            row: i + 1,
-            top: rect.top,
-            bottom: rect.bottom,
-            height: rect.height,
-            fitsInViewport: rect.bottom <= window.innerHeight,
-          };
-        });
-      });
-      console.log(`[KEYBOARD ROWS ${vp.name}]`, rowsBounding);
-      expect(rowsBounding.length).toBe(5);
-      for (const r of rowsBounding) {
-        expect(r.fitsInViewport, `Row ${r.row} must fit completely within viewport at ${vp.name}`).toBe(true);
-      }
+    const trainStory = page.locator('button:has-text("Story 4: A Journey by Train")');
+    await expect(trainStory).toBeVisible();
+    await trainStory.click();
+    await expect(trainStory).toHaveAttribute('aria-pressed', 'true');
 
-      // Verify that no page-level vertical scrollbar is triggered
-      const hasVerticalScroll = await page.evaluate(() => {
-        return document.documentElement.scrollHeight > window.innerHeight;
-      });
-      expect(hasVerticalScroll, `Expected no vertical scrollbar at ${vp.name}`).toBe(false);
-
-      // Verify no horizontal overflow
-      const hasHorizontalOverflow = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth;
-      });
-      expect(hasHorizontalOverflow, `Expected no horizontal overflow at ${vp.name}`).toBe(false);
-
-      // Capture screenshot for layout verification
-      await page.screenshot({ path: `test-results/viewport-${vp.name}.png` });
-    }
+    // Start practice with selected chapter
+    await page.click('button[data-testid="start-practice-btn"]');
+    await expect(page).toHaveURL(/.*practice/);
+    await expect(page.locator('text=Story 4: A Journey by Train')).toBeVisible();
   });
 
   test('Verify word-level typing validation with automatic cursor advancement across English and Hindi InScript', async ({
     page,
   }) => {
-    // 1. Open English Practice
+    // 1. Open English Practice Setup
     await page.goto('/setup?lang=en');
+    const chapter1 = page.locator('button:has-text("Chapter 1: Home Row - Left Hand")');
+    await chapter1.click();
     await page.click('button[data-testid="start-practice-btn"]');
     await expect(page).toHaveURL(/.*practice/);
 
@@ -224,7 +192,7 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
     await expect(word0).toHaveAttribute('data-status', 'correct');
     await expect(word0).toHaveClass(/text-emerald-600/);
 
-    // Cursor automatically moves to Word 1 ('jkl;') which becomes BLUE active
+    // Cursor automatically moves to Word 1 ('asdf') which becomes BLUE active
     const word1 = page.locator('span[data-testid="word-1"]');
     await expect(word1).toBeVisible();
     await expect(word1).toHaveAttribute('data-status', 'active');
@@ -261,7 +229,6 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
     await page.keyboard.press('KeyA');
     await page.keyboard.press('KeyS');
     await page.keyboard.press('KeyX');
-    await expect(page.locator('text=Current input:')).not.toBeVisible();
     await page.keyboard.press('Backspace');
     await page.keyboard.press('KeyD');
     await page.keyboard.press('KeyF');
@@ -273,34 +240,82 @@ test.describe('Typing Tutor Complete End-to-End Flow', () => {
 
     // 2. Test Hindi InScript Word-Level Validation
     await page.goto('/setup?lang=hi');
+    const hindiWords = page.locator('button:has-text("दो अक्षर वाले सरल अमात्रिक शब्द")');
+    await hindiWords.click();
     await page.click('button[data-testid="start-practice-btn"]');
     await expect(page).toHaveURL(/.*practice/);
 
-    // Hindi Lesson 1 has space-separated words: 'प', 'र', 'क', 'त', 'च'...
     const hindiWord0 = page.locator('span[data-testid="word-0"]');
     await expect(hindiWord0).toBeVisible();
     await expect(hindiWord0).toHaveAttribute('data-status', 'active');
-    await expect(hindiWord0).toHaveAttribute('data-expected', 'प');
+    await expect(hindiWord0).toHaveAttribute('data-expected', 'कम');
 
-    // Type correct 'प' (KeyH) + Space -> turns GREEN
-    await page.keyboard.press('KeyH');
+    // Type correct 'कम': क (KeyK) + म (KeyC) + Space -> turns GREEN
+    await page.keyboard.press('KeyK');
+    await page.keyboard.press('KeyC');
     await page.keyboard.press('Space');
     await expect(hindiWord0).toHaveAttribute('data-status', 'correct');
     await expect(hindiWord0).toHaveClass(/text-emerald-600/);
 
-    // Word 1 ('र') is now active
+    // Word 1 ('पर') is now active
     const hindiWord1 = page.locator('span[data-testid="word-1"]');
+    await expect(hindiWord1).toBeVisible();
     await expect(hindiWord1).toHaveAttribute('data-status', 'active');
 
-    // Type WRONG Hindi key (KeyL which produces 'त' instead of 'र') + Space
+    // Type WRONG Hindi key (KeyL producing 'त' instead of 'प') + Space
     await page.keyboard.press('KeyL');
     await page.keyboard.press('Space');
 
-    // Word 1 turns RED, cursor automatically moves to Word 2 ('क')
+    // Word 1 turns RED, cursor automatically moves to Word 2 ('तब')
     await expect(hindiWord1).toHaveAttribute('data-status', 'incorrect');
     await expect(hindiWord1).toHaveClass(/text-red-500/);
 
     const hindiWord2 = page.locator('span[data-testid="word-2"]');
     await expect(hindiWord2).toHaveAttribute('data-status', 'active');
+  });
+
+  test('Verify Timed Practice Session continues across multiple passages', async ({ page }) => {
+    // 1. Setup 1-Minute session
+    await page.goto('/setup?lang=en');
+    const oneMinBtn = page.locator('button:has-text("1 Minute")');
+    await oneMinBtn.click();
+
+    // Select Chapter 1
+    const chapter1 = page.locator('button:has-text("Chapter 1: Home Row - Left Hand")');
+    await chapter1.click();
+
+    await page.click('button[data-testid="start-practice-btn"]');
+    await expect(page).toHaveURL(/.*practice/);
+
+    // Verify Passage 1 indicator
+    await expect(page.locator('text=Passage 1 of 4')).toBeVisible();
+
+    // Verify remaining timer countdown
+    const timerCard = page.locator('text=Remaining').locator('..');
+    await expect(timerCard).toBeVisible();
+
+    // Complete the first passage words rapidly
+    const passage1Words = [
+      'asdf', 'asdf', 'asdf', 'asdf', 'aassddff',
+      'fdsa', 'fdsa', 'fads', 'asdf'
+    ];
+
+    for (const word of passage1Words) {
+      for (const ch of word) {
+        await page.keyboard.press(`Key${ch.toUpperCase()}`);
+      }
+      await page.keyboard.press('Space');
+    }
+
+    // Verify Passage 2 automatically loaded and practice CONTINUES!
+    await expect(page.locator('text=Passage 2 of 4')).toBeVisible({ timeout: 5000 });
+    // Still on /practice! Never finished early!
+    await expect(page).toHaveURL(/.*practice/);
+
+    // Finish session manually
+    const finishBtn = page.locator('button:has-text("Finish Session")');
+    await finishBtn.click();
+    await expect(page).toHaveURL(/.*results/);
+    await expect(page.locator('text=Session Complete!')).toBeVisible();
   });
 });

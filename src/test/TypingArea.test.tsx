@@ -51,6 +51,46 @@ describe('TypingArea Component Word-Level Visual Feedback', () => {
     expect(cursor).not.toBeNull();
   });
 
+  it('keeps the active word visible in the bounded passage viewport', () => {
+    const wordResults: WordResult[] = [
+      { expected: 'the', actual: '', status: 'active', errors: 0, characters: [] },
+      { expected: 'quick', actual: '', status: 'pending', errors: 0, characters: [] },
+      { expected: 'brown', actual: '', status: 'pending', errors: 0, characters: [] },
+      { expected: 'fox', actual: '', status: 'pending', errors: 0, characters: [] },
+    ];
+
+    const { rerender } = render(
+      <TypingArea
+        lesson={dummyLesson}
+        words={['the', 'quick', 'brown', 'fox']}
+        currentWordIndex={0}
+        wordResults={wordResults}
+        status="running"
+      />
+    );
+
+    const passage = screen.getByTestId('typing-passage');
+    expect(passage.className).toContain('max-h-32');
+    expect(passage.className).toContain('overflow-hidden');
+    Object.defineProperty(passage, 'clientHeight', { configurable: true, value: 100 });
+    passage.scrollTop = 0;
+    passage.getBoundingClientRect = () => new DOMRect(0, 0, 400, 100);
+    screen.getByTestId('word-2').getBoundingClientRect = () =>
+      new DOMRect(0, 200, 50, 20);
+
+    rerender(
+      <TypingArea
+        lesson={dummyLesson}
+        words={['the', 'quick', 'brown', 'fox']}
+        currentWordIndex={2}
+        wordResults={wordResults}
+        status="running"
+      />
+    );
+
+    expect(passage.scrollTop).toBeGreaterThan(0);
+  });
+
   it('renders entire incorrect word in RED when finalized with mistake and verifies debug UI is removed', () => {
     const wordResults: WordResult[] = [
       { expected: 'the', actual: 'the', status: 'correct', errors: 0, characters: [] },

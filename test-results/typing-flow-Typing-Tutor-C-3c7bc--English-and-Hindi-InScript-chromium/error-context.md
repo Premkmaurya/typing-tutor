@@ -1,0 +1,356 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: typing-flow.spec.ts >> Typing Tutor Complete End-to-End Flow >> Verify word-level typing validation with automatic cursor advancement across English and Hindi InScript
+- Location: e2e\typing-flow.spec.ts:168:3
+
+# Error details
+
+```
+Test timeout of 120000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "अक्षर Typing" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e12]:
+            - generic [ref=e13]: अक्षर
+            - generic [ref=e14]: Typing
+        - navigation [ref=e15]:
+          - link "Dashboard" [ref=e16] [cursor=pointer]:
+            - /url: /
+          - link "Practice Setup" [ref=e19] [cursor=pointer]:
+            - /url: /setup
+          - link "Analytics" [ref=e22] [cursor=pointer]:
+            - /url: /progress
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - button "हिन्दी (InScript)" [ref=e28] [cursor=pointer]
+          - button "English" [ref=e29] [cursor=pointer]
+        - button "Mute sound" [ref=e30] [cursor=pointer]
+        - button "Toggle theme" [ref=e35] [cursor=pointer]
+  - main [ref=e42]:
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - 'heading "Chapter 1: Home Row - Left Hand (A S D F)" [level=1] [ref=e46]'
+          - generic [ref=e47]: English QWERTY
+          - generic [ref=e48]: beginner
+          - generic [ref=e49]: Passage 1 of 4
+        - generic [ref=e50]: 11%
+      - generic [ref=e53]:
+        - generic [ref=e59]:
+          - paragraph [ref=e60]: WPM / Speed
+          - generic [ref=e61]:
+            - generic [ref=e62]: "1"
+            - generic [ref=e63]: wpm
+        - generic [ref=e69]:
+          - paragraph [ref=e70]: Accuracy
+          - generic [ref=e71]: 100%
+        - generic [ref=e77]:
+          - paragraph [ref=e78]: Mistakes
+          - generic [ref=e79]: "0"
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: Elapsed
+          - generic [ref=e88]: 0:54
+      - generic "Typing practice input area. Press any key to type." [active] [ref=e90]:
+        - generic [ref=e91]:
+          - generic [ref=e92]: asdf
+          - generic [ref=e93]: asdf
+          - generic [ref=e94]: asdf
+          - generic [ref=e95]: asdf
+          - generic [ref=e96]: aassddff
+          - generic [ref=e97]: fdsa
+          - generic [ref=e98]: fdsa
+          - generic [ref=e99]: fads
+          - generic [ref=e100]: asdf
+        - generic [ref=e101]:
+          - generic [ref=e102]: Press Space to validate word and continue
+          - generic [ref=e103]: Word 2 of 9
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - button "Pause" [ref=e106] [cursor=pointer]
+          - button "Restart" [ref=e111] [cursor=pointer]
+          - button "Finish Session" [ref=e116] [cursor=pointer]
+        - generic [ref=e121]:
+          - button "Hide Keyboard" [ref=e122] [cursor=pointer]
+          - button "Change Lesson" [ref=e126] [cursor=pointer]
+      - generic [ref=e131]:
+        - generic [ref=e133]:
+          - generic [ref=e134]: English US QWERTY
+          - generic [ref=e135]: ANSI Standard
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - 'button "Backquote: `" [ref=e139] [cursor=pointer]':
+              - generic [ref=e140]:
+                - generic [ref=e141]: "~"
+                - generic [ref=e142]: "`"
+              - generic [ref=e143]: "`"
+            - 'button "Digit1: 1" [ref=e145] [cursor=pointer]':
+              - generic [ref=e146]:
+                - generic [ref=e147]: "!"
+                - generic [ref=e148]: "1"
+              - generic [ref=e149]: "1"
+            - 'button "Digit2: 2" [ref=e151] [cursor=pointer]':
+              - generic [ref=e152]:
+                - generic [ref=e153]: "@"
+                - generic [ref=e154]: "2"
+              - generic [ref=e155]: "2"
+            - 'button "Digit3: 3" [ref=e157] [cursor=pointer]':
+              - generic [ref=e158]:
+                - generic [ref=e159]: "#"
+                - generic [ref=e160]: "3"
+              - generic [ref=e161]: "3"
+            - 'button "Digit4: 4" [ref=e163] [cursor=pointer]':
+              - generic [ref=e164]:
+                - generic [ref=e165]: $
+                - generic [ref=e166]: "4"
+              - generic [ref=e167]: "4"
+            - 'button "Digit5: 5" [ref=e169] [cursor=pointer]':
+              - generic [ref=e170]:
+                - generic [ref=e171]: "%"
+                - generic [ref=e172]: "5"
+              - generic [ref=e173]: "5"
+            - 'button "Digit6: 6" [ref=e175] [cursor=pointer]':
+              - generic [ref=e176]:
+                - generic [ref=e177]: ^
+                - generic [ref=e178]: "6"
+              - generic [ref=e179]: "6"
+            - 'button "Digit7: 7" [ref=e181] [cursor=pointer]':
+              - generic [ref=e182]:
+                - generic [ref=e183]: "&"
+                - generic [ref=e184]: "7"
+              - generic [ref=e185]: "7"
+            - 'button "Digit8: 8" [ref=e187] [cursor=pointer]':
+              - generic [ref=e188]:
+                - generic [ref=e189]: "*"
+                - generic [ref=e190]: "8"
+              - generic [ref=e191]: "8"
+            - 'button "Digit9: 9" [ref=e193] [cursor=pointer]':
+              - generic [ref=e194]:
+                - generic [ref=e195]: (
+                - generic [ref=e196]: "9"
+              - generic [ref=e197]: "9"
+            - 'button "Digit0: 0" [ref=e199] [cursor=pointer]':
+              - generic [ref=e200]:
+                - generic [ref=e201]: )
+                - generic [ref=e202]: "0"
+              - generic [ref=e203]: "0"
+            - 'button "Minus: -" [ref=e205] [cursor=pointer]':
+              - generic [ref=e206]:
+                - generic [ref=e207]: _
+                - generic [ref=e208]: "-"
+              - generic [ref=e209]: "-"
+            - 'button "Equal: =" [ref=e211] [cursor=pointer]':
+              - generic [ref=e212]:
+                - generic [ref=e213]: +
+                - generic [ref=e214]: ृ
+              - generic [ref=e215]: =
+            - 'button "Backspace: Backspace" [ref=e217] [cursor=pointer]':
+              - generic [ref=e218]: Backspace
+          - generic [ref=e220]:
+            - button "Tab:" [ref=e221] [cursor=pointer]:
+              - generic [ref=e222]: Tab
+            - 'button "KeyQ: q" [ref=e224] [cursor=pointer]':
+              - generic [ref=e225]:
+                - generic [ref=e226]: Q
+                - generic [ref=e227]: ौ
+              - generic [ref=e228]: q
+            - 'button "KeyW: w" [ref=e230] [cursor=pointer]':
+              - generic [ref=e231]:
+                - generic [ref=e232]: W
+                - generic [ref=e233]: ै
+              - generic [ref=e234]: w
+            - 'button "KeyE: e" [ref=e236] [cursor=pointer]':
+              - generic [ref=e237]:
+                - generic [ref=e238]: E
+                - generic [ref=e239]: ा
+              - generic [ref=e240]: e
+            - 'button "KeyR: r" [ref=e242] [cursor=pointer]':
+              - generic [ref=e243]:
+                - generic [ref=e244]: R
+                - generic [ref=e245]: ी
+              - generic [ref=e246]: r
+            - 'button "KeyT: t" [ref=e248] [cursor=pointer]':
+              - generic [ref=e249]:
+                - generic [ref=e250]: T
+                - generic [ref=e251]: ू
+              - generic [ref=e252]: t
+            - 'button "KeyY: y" [ref=e254] [cursor=pointer]':
+              - generic [ref=e255]:
+                - generic [ref=e256]: "Y"
+                - generic [ref=e257]: ब
+              - generic [ref=e258]: "y"
+            - 'button "KeyU: u" [ref=e260] [cursor=pointer]':
+              - generic [ref=e261]:
+                - generic [ref=e262]: U
+                - generic [ref=e263]: ह
+              - generic [ref=e264]: u
+            - 'button "KeyI: i" [ref=e266] [cursor=pointer]':
+              - generic [ref=e267]:
+                - generic [ref=e268]: I
+                - generic [ref=e269]: ग
+              - generic [ref=e270]: i
+            - 'button "KeyO: o" [ref=e272] [cursor=pointer]':
+              - generic [ref=e273]:
+                - generic [ref=e274]: O
+                - generic [ref=e275]: द
+              - generic [ref=e276]: o
+            - 'button "KeyP: p" [ref=e278] [cursor=pointer]':
+              - generic [ref=e279]:
+                - generic [ref=e280]: P
+                - generic [ref=e281]: ज
+              - generic [ref=e282]: p
+            - 'button "BracketLeft: [" [ref=e284] [cursor=pointer]':
+              - generic [ref=e285]:
+                - generic [ref=e286]: "{"
+                - generic [ref=e287]: ड
+              - generic [ref=e288]: "["
+            - 'button "BracketRight: ]" [ref=e290] [cursor=pointer]':
+              - generic [ref=e291]:
+                - generic [ref=e292]: "}"
+                - generic [ref=e293]: ़
+              - generic [ref=e294]: "]"
+            - 'button "Backslash: \\" [ref=e296] [cursor=pointer]':
+              - generic [ref=e297]:
+                - generic [ref=e298]: "|"
+                - generic [ref=e299]: ॉ
+              - generic [ref=e300]: \
+          - generic [ref=e302]:
+            - 'button "Caps Lock: CapsLock" [ref=e303] [cursor=pointer]':
+              - generic [ref=e304]: Caps Lock
+            - 'button "KeyA: a" [ref=e306] [cursor=pointer]':
+              - generic [ref=e307]:
+                - generic [ref=e308]: A
+                - generic [ref=e309]: ो
+              - generic [ref=e310]: a
+            - 'button "KeyS: s" [ref=e312] [cursor=pointer]':
+              - generic [ref=e313]:
+                - generic [ref=e314]: S
+                - generic [ref=e315]: े
+              - generic [ref=e316]: s
+            - 'button "KeyD: d" [ref=e318] [cursor=pointer]':
+              - generic [ref=e319]:
+                - generic [ref=e320]: D
+                - generic [ref=e321]: ्
+              - generic [ref=e322]: d
+            - 'button "KeyF: f" [ref=e324] [cursor=pointer]':
+              - generic [ref=e325]:
+                - generic [ref=e326]: F
+                - generic [ref=e327]: ि
+              - generic [ref=e328]: f
+            - 'button "KeyG: g" [ref=e330] [cursor=pointer]':
+              - generic [ref=e331]:
+                - generic [ref=e332]: G
+                - generic [ref=e333]: ु
+              - generic [ref=e334]: g
+            - 'button "KeyH: h" [ref=e336] [cursor=pointer]':
+              - generic [ref=e337]:
+                - generic [ref=e338]: H
+                - generic [ref=e339]: प
+              - generic [ref=e340]: h
+            - 'button "KeyJ: j" [ref=e342] [cursor=pointer]':
+              - generic [ref=e343]:
+                - generic [ref=e344]: J
+                - generic [ref=e345]: र
+              - generic [ref=e346]: j
+            - 'button "KeyK: k" [ref=e348] [cursor=pointer]':
+              - generic [ref=e349]:
+                - generic [ref=e350]: K
+                - generic [ref=e351]: क
+              - generic [ref=e352]: k
+            - 'button "KeyL: l" [ref=e354] [cursor=pointer]':
+              - generic [ref=e355]:
+                - generic [ref=e356]: L
+                - generic [ref=e357]: त
+              - generic [ref=e358]: l
+            - 'button "Semicolon: ;" [ref=e360] [cursor=pointer]':
+              - generic [ref=e361]:
+                - generic [ref=e362]: ":"
+                - generic [ref=e363]: च
+              - generic [ref=e364]: ;
+            - 'button "Quote: ''" [ref=e366] [cursor=pointer]':
+              - generic [ref=e367]:
+                - generic [ref=e368]: "\""
+                - generic [ref=e369]: ट
+              - generic [ref=e370]: "'"
+            - button "Enter:" [ref=e372] [cursor=pointer]:
+              - generic [ref=e373]: Enter
+          - generic [ref=e375]:
+            - 'button "Shift: ShiftLeft" [ref=e376] [cursor=pointer]':
+              - generic [ref=e377]: Shift
+            - 'button "KeyZ: z" [ref=e379] [cursor=pointer]':
+              - generic [ref=e380]:
+                - generic [ref=e381]: Z
+                - generic [ref=e382]: ॆ
+              - generic [ref=e383]: z
+            - 'button "KeyX: x" [ref=e385] [cursor=pointer]':
+              - generic [ref=e386]:
+                - generic [ref=e387]: X
+                - generic [ref=e388]: ं
+              - generic [ref=e389]: x
+            - 'button "KeyC: c" [ref=e391] [cursor=pointer]':
+              - generic [ref=e392]:
+                - generic [ref=e393]: C
+                - generic [ref=e394]: म
+              - generic [ref=e395]: c
+            - 'button "KeyV: v" [ref=e397] [cursor=pointer]':
+              - generic [ref=e398]:
+                - generic [ref=e399]: V
+                - generic [ref=e400]: न
+              - generic [ref=e401]: v
+            - 'button "KeyB: b" [ref=e403] [cursor=pointer]':
+              - generic [ref=e404]:
+                - generic [ref=e405]: B
+                - generic [ref=e406]: व
+              - generic [ref=e407]: b
+            - 'button "KeyN: n" [ref=e409] [cursor=pointer]':
+              - generic [ref=e410]:
+                - generic [ref=e411]: "N"
+                - generic [ref=e412]: ल
+              - generic [ref=e413]: "n"
+            - 'button "KeyM: m" [ref=e415] [cursor=pointer]':
+              - generic [ref=e416]:
+                - generic [ref=e417]: M
+                - generic [ref=e418]: स
+              - generic [ref=e419]: m
+            - 'button "Comma: ," [ref=e421] [cursor=pointer]':
+              - generic [ref=e422]:
+                - generic [ref=e423]: <
+                - generic [ref=e424]: ","
+              - generic [ref=e425]: ","
+            - 'button "Period: ." [ref=e427] [cursor=pointer]':
+              - generic [ref=e428]:
+                - generic [ref=e429]: ">"
+                - generic [ref=e430]: .
+              - generic [ref=e431]: .
+            - 'button "Slash: /" [ref=e433] [cursor=pointer]':
+              - generic [ref=e434]:
+                - generic [ref=e435]: "?"
+                - generic [ref=e436]: य
+              - generic [ref=e437]: /
+            - 'button "Shift: ShiftRight" [ref=e439] [cursor=pointer]':
+              - generic [ref=e440]: Shift
+          - generic [ref=e442]:
+            - 'button "Ctrl: ControlLeft" [ref=e443] [cursor=pointer]':
+              - generic [ref=e444]: Ctrl
+            - 'button "Alt: AltLeft" [ref=e446] [cursor=pointer]':
+              - generic [ref=e447]: Alt
+            - button "Space:" [ref=e449] [cursor=pointer]:
+              - generic [ref=e450]: Space
+            - 'button "AltGr: AltRight" [ref=e452] [cursor=pointer]':
+              - generic [ref=e453]: AltGr
+            - 'button "Ctrl: ControlRight" [ref=e455] [cursor=pointer]':
+              - generic [ref=e456]: Ctrl
+```

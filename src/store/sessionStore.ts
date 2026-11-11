@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Language, ModifierState } from '../types/keyboard.types';
 import { TypingLesson } from '../types/lesson.types';
-import { SessionResult } from '../types/stats.types';
+import { PassageResult, SessionResult } from '../types/stats.types';
 import { SessionStatus, TypedCharacter, TypingInput, CharacterResult, WordResult } from '../types/typing.types';
 import {
   extractWordsFromText,
@@ -10,13 +10,22 @@ import {
   initializeWordResults,
 } from '../core/typing/wordValidator';
 import { resolveOutputChar } from '../core/keyboard/layerResolver';
+import { textToLessonSteps } from '../core/typing/composer';
 import { StorageService } from '../services/storage.service';
+import { ALL_LESSONS } from '../data/lessons';
 
 interface SessionState {
   status: SessionStatus;
   lesson: TypingLesson | null;
   language: Language;
-  durationMinutes: number; // 0 = unlimited
+  durationMinutes: number; // 0 = unlimited, 1, 3, 5, 10
+
+  // Multi-Passage Queue Architecture
+  passageQueue: string[];
+  currentPassageIndex: number;
+  completedPassages: PassageResult[];
+  passageStartTime: number | null;
+  passageAccumulatedMs: number;
 
   // Word-level state
   words: string[];
@@ -42,8 +51,10 @@ interface SessionState {
   firstAttemptErrors: Set<number>;
   weakKeysMap: Record<string, { display: string; count: number }>;
 
-  // Timers
-  startTime: number | null;
+  // Timestamp-based reliable timers
+  sessionStartTime: number | null;
+  lastResumeTimestamp: number | null;
+  accumulatedActiveMs: number;
   elapsedSeconds: number;
   remainingSeconds: number;
 
@@ -65,9 +76,11 @@ interface SessionState {
   processKey: (code: string, modifiers?: Partial<ModifierState>) => void;
   setModifiers: (modifiers: Partial<ModifierState>) => void;
   tickTimer: () => void;
+  syncTimers: () => void;
   pauseSession: () => void;
   resumeSession: () => void;
   restartSession: () => void;
+  advancePassage: () => void;
   finishSession: () => SessionResult | null;
   getCharacterResults: () => CharacterResult[];
   getWordResults: () => WordResult[];
@@ -86,6 +99,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   lesson: null,
   language: 'hi',
   durationMinutes: 0,
+
+  passageQueue: [],
+  currentPassageIndex: 0,
+  completedPassages: [],
+  passageStartTime: null,
+  passageAccumulatedMs: 0,
 
   words: [],
   currentWordIndex: 0,
@@ -109,7 +128,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   firstAttemptErrors: new Set<number>(),
   weakKeysMap: {},
 
-  startTime: null,
+  sessionStartTime: null,
+  lastResumeTimestamp: null,
+  accumulatedActiveMs: 0,
   elapsedSeconds: 0,
   remainingSeconds: 0,
 
@@ -124,17 +145,44 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   startLesson: (lesson, durationMinutes = 0) => {
     const totalSeconds = durationMinutes > 0 ? durationMinutes * 60 : 0;
-    const extracted = extractWordsFromText(lesson.targetText || '');
-    const words = extracted.length > 0
-      ? extracted
-      : (lesson.steps?.map((s) => s.expectedOutput).join('').trim().split(/\s+/).filter(Boolean) || ['']);
+
+    let passageQueue: string[] = [];
+    if (lesson.content && lesson.content.length > 0) {
+      if (lesson.targetText && !lesson.content.includes(lesson.targetText)) {
+        passageQueue = [lesson.targetText, ...lesson.content];
+      } else {
+        passageQueue = [...lesson.content];
+      }
+    } else if (lesson.targetText) {
+      passageQueue = [lesson.targetText];
+    }
+    passageQueue = passageQueue.filter((p) => p.trim().length > 0);
+    const initialPassage = passageQueue[0] || lesson.targetText || '';
+
+    const extracted = extractWordsFromText(initialPassage);
+    const words =
+      extracted.length > 0
+        ? extracted
+        : lesson.steps?.map((s) => s.expectedOutput).join('').trim().split(/\s+/).filter(Boolean) || [''];
     const wordResults = initializeWordResults(words, lesson.language);
+    const now = Date.now();
+
+    const preparedLesson: TypingLesson = {
+      ...lesson,
+      targetText: initialPassage,
+      steps: textToLessonSteps(initialPassage, lesson.language),
+    };
 
     set({
       status: 'running',
-      lesson,
+      lesson: preparedLesson,
       language: lesson.language,
       durationMinutes,
+      passageQueue,
+      currentPassageIndex: 0,
+      completedPassages: [],
+      passageStartTime: now,
+      passageAccumulatedMs: 0,
       words,
       currentWordIndex: 0,
       currentWordBuffer: '',
@@ -154,7 +202,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       correctedErrors: 0,
       firstAttemptErrors: new Set<number>(),
       weakKeysMap: {},
-      startTime: Date.now(),
+      sessionStartTime: now,
+      lastResumeTimestamp: now,
+      accumulatedActiveMs: 0,
       elapsedSeconds: 0,
       remainingSeconds: totalSeconds,
       lastPressedCode: null,
@@ -175,8 +225,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const state = get();
     if (state.status !== 'running' || !state.lesson || state.words.length === 0) return;
 
-    if (state.currentWordIndex >= state.words.length) {
+    // Check if session time has expired
+    if (state.durationMinutes > 0 && state.remainingSeconds <= 0) {
       get().finishSession();
+      return;
+    }
+
+    // If passage already consumed, advance to next passage or finish
+    if (state.currentWordIndex >= state.words.length) {
+      if (state.durationMinutes > 0 || state.passageQueue.length > 1) {
+        get().advancePassage();
+      } else {
+        get().finishSession();
+      }
       return;
     }
 
@@ -247,8 +308,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           currentStepIndex: nextStepIndex < 0 ? characters.length : nextStepIndex,
           currentStepError: null,
           backspaceCount: state.backspaceCount + 1,
-          correctedErrors: state.correctedErrors +
-            (removedCharacter.status === 'incorrect' ? 1 : 0),
+          correctedErrors:
+            state.correctedErrors + (removedCharacter.status === 'incorrect' ? 1 : 0),
           totalKeypresses: state.totalKeypresses + 1,
           lastPressedCode: input.code,
           lastPressStatus: null,
@@ -273,7 +334,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // Finalize current word
       const currentExpected = state.words[state.currentWordIndex];
       const isCorrect = areWordsEqual(state.currentWordBuffer, currentExpected, state.language);
-      const wordErrors = isCorrect ? 0 : Math.max(1, computeWordErrors(state.currentWordBuffer, currentExpected));
+      const wordErrors = isCorrect
+        ? 0
+        : Math.max(1, computeWordErrors(state.currentWordBuffer, currentExpected));
 
       const updatedWordResults = [...state.wordResults];
       updatedWordResults[state.currentWordIndex] = {
@@ -317,7 +380,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         .filter((w) => w.status === 'correct')
         .reduce((sum, w) => sum + w.expected.length + 1, 0);
       const liveCpm = Math.round(netChars / effectiveMinutes);
-      const liveWpm = state.language === 'hi' ? Math.round(liveCpm / 5) : Math.round((netChars / 5) / effectiveMinutes);
+      const liveWpm =
+        state.language === 'hi' ? Math.round(liveCpm / 5) : Math.round(netChars / 5 / effectiveMinutes);
 
       set({
         currentWordIndex: nextWordIndex,
@@ -340,8 +404,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         liveAccuracy: newWordAccuracy,
       });
 
+      // If finished last word of the passage:
       if (nextWordIndex >= state.words.length) {
-        get().finishSession();
+        if (state.durationMinutes > 0 || state.passageQueue.length > 1) {
+          get().advancePassage();
+        } else {
+          get().finishSession();
+        }
       }
       return;
     }
@@ -416,7 +485,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         .filter((w) => w.status === 'correct')
         .reduce((sum, w) => sum + w.expected.length + 1, 0);
       const liveCpm = Math.round(netChars / effectiveMinutes);
-      const liveWpm = state.language === 'hi' ? Math.round(liveCpm / 5) : Math.round((netChars / 5) / effectiveMinutes);
+      const liveWpm =
+        state.language === 'hi' ? Math.round(liveCpm / 5) : Math.round(netChars / 5 / effectiveMinutes);
 
       set({
         currentWordIndex: state.words.length,
@@ -436,7 +506,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         liveAccuracy: newWordAccuracy,
       });
 
-      get().finishSession();
+      // Advance to next passage if timed or multiple passages exist; else finish single-passage
+      if (state.durationMinutes > 0 || state.passageQueue.length > 1) {
+        get().advancePassage();
+      } else {
+        get().finishSession();
+      }
       return;
     }
 
@@ -450,6 +525,106 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       incorrectKeypresses: state.incorrectKeypresses + (isCharacterCorrect ? 0 : 1),
       lastPressedCode: input.code,
       lastPressStatus: isCharacterCorrect ? 'correct' : 'incorrect',
+    });
+  },
+
+  advancePassage: () => {
+    const state = get();
+    if (state.status !== 'running' || !state.lesson) return;
+
+    // 1. Calculate and save passage-level statistics
+    const now = Date.now();
+    const activePassageMs =
+      state.passageAccumulatedMs +
+      (state.status === 'running' && state.lastResumeTimestamp
+        ? Math.max(0, now - state.lastResumeTimestamp)
+        : 0);
+    const passageDurationSec = Math.max(1, Math.round(activePassageMs / 1000));
+
+    const passageWords = state.wordResults;
+    const passageAttempted = passageWords.filter(
+      (w) => w.status === 'correct' || w.status === 'incorrect'
+    ).length;
+    const passageCorrect = passageWords.filter((w) => w.status === 'correct').length;
+    const passageIncorrect = passageWords.filter((w) => w.status === 'incorrect').length;
+    const passageAccuracy =
+      passageAttempted > 0 ? Math.round((passageCorrect / passageAttempted) * 100) : 100;
+
+    const passageMins = Math.max(passageDurationSec / 60, 0.0167);
+    const passageNetChars = passageWords
+      .filter((w) => w.status === 'correct')
+      .reduce((sum, w) => sum + w.expected.length + 1, 0);
+    const passageCpm = Math.round(passageNetChars / passageMins);
+    const passageWpm =
+      state.language === 'hi'
+        ? Math.round(passageCpm / 5)
+        : Math.round(passageNetChars / 5 / passageMins);
+
+    const completedRecord: PassageResult = {
+      passageIndex: state.completedPassages.length + 1,
+      text: state.words.join(' '),
+      durationSeconds: passageDurationSec,
+      totalWords: passageAttempted,
+      correctWords: passageCorrect,
+      incorrectWords: passageIncorrect,
+      wpm: passageWpm,
+      cpm: passageCpm,
+      accuracy: passageAccuracy,
+    };
+
+    const newCompleted = [...state.completedPassages, completedRecord];
+
+    // If duration expired, finish session now
+    if (state.durationMinutes > 0 && state.remainingSeconds <= 0) {
+      set({ completedPassages: newCompleted });
+      get().finishSession();
+      return;
+    }
+
+    // 2. Determine Next Passage
+    const nextPassageIndex = state.currentPassageIndex + 1;
+    let nextPassageText = '';
+
+    if (nextPassageIndex < state.passageQueue.length) {
+      nextPassageText = state.passageQueue[nextPassageIndex];
+    } else {
+      // Content queue exhausted: replenish dynamically from lesson or sibling lessons of same language
+      const siblingLessons = ALL_LESSONS.filter(
+        (l) => l.language === state.language && l.category === state.lesson?.category
+      );
+      const candidates = siblingLessons.flatMap((l) => (l.content ? l.content : [l.targetText]));
+      const unused = candidates.filter((p) => p && !state.passageQueue.includes(p));
+
+      if (unused.length > 0) {
+        nextPassageText = unused[0];
+      } else {
+        // Cycle back to beginning of queue
+        nextPassageText = state.passageQueue[nextPassageIndex % state.passageQueue.length];
+      }
+      set((s) => ({ passageQueue: [...s.passageQueue, nextPassageText] }));
+    }
+
+    // 3. Reset passage cursor and load next words
+    const nextWords = extractWordsFromText(nextPassageText);
+    const nextWordResults = initializeWordResults(nextWords, state.language);
+    const nextSteps = textToLessonSteps(nextPassageText, state.language);
+
+    set({
+      completedPassages: newCompleted,
+      currentPassageIndex: nextPassageIndex,
+      passageStartTime: now,
+      passageAccumulatedMs: 0,
+      words: nextWords,
+      wordResults: nextWordResults,
+      currentWordIndex: 0,
+      currentWordBuffer: '',
+      currentStepIndex: 0,
+      currentStepError: null,
+      lesson: {
+        ...state.lesson,
+        targetText: nextPassageText,
+        steps: nextSteps,
+      },
     });
   },
 
@@ -475,17 +650,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     get().processInput(input);
   },
 
-  tickTimer: () => {
+  syncTimers: () => {
     const state = get();
-    if (state.status !== 'running' || !state.lesson) return;
+    if (state.status !== 'running' || !state.sessionStartTime) return;
 
-    const newElapsed = state.elapsedSeconds + 1;
+    const now = Date.now();
+    const activeMs =
+      state.accumulatedActiveMs +
+      (state.lastResumeTimestamp ? Math.max(0, now - state.lastResumeTimestamp) : 0);
+    const newElapsed = Math.floor(activeMs / 1000);
+
     let newRemaining = state.remainingSeconds;
-
     if (state.durationMinutes > 0) {
-      newRemaining = Math.max(0, state.remainingSeconds - 1);
+      const totalSeconds = state.durationMinutes * 60;
+      newRemaining = Math.max(0, totalSeconds - newElapsed);
+
       if (newRemaining <= 0) {
-        set({ elapsedSeconds: newElapsed, remainingSeconds: 0 });
+        set({
+          elapsedSeconds: totalSeconds,
+          remainingSeconds: 0,
+        });
         get().finishSession();
         return;
       }
@@ -496,7 +680,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       .filter((w) => w.status === 'correct')
       .reduce((sum, w) => sum + w.expected.length + 1, 0);
     const liveCpm = Math.round(netChars / effectiveMinutes);
-    const liveWpm = state.language === 'hi' ? Math.round(liveCpm / 5) : Math.round((netChars / 5) / effectiveMinutes);
+    const liveWpm =
+      state.language === 'hi' ? Math.round(liveCpm / 5) : Math.round(netChars / 5 / effectiveMinutes);
 
     set({
       elapsedSeconds: newElapsed,
@@ -507,15 +692,33 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
   },
 
+  tickTimer: () => {
+    get().syncTimers();
+  },
+
   pauseSession: () => {
-    if (get().status === 'running') {
-      set({ status: 'paused' });
+    const state = get();
+    if (state.status === 'running') {
+      const now = Date.now();
+      const currentDelta = state.lastResumeTimestamp ? Math.max(0, now - state.lastResumeTimestamp) : 0;
+      set({
+        status: 'paused',
+        accumulatedActiveMs: state.accumulatedActiveMs + currentDelta,
+        passageAccumulatedMs: state.passageAccumulatedMs + currentDelta,
+        lastResumeTimestamp: null,
+      });
     }
   },
 
   resumeSession: () => {
-    if (get().status === 'paused') {
-      set({ status: 'running' });
+    const state = get();
+    if (state.status === 'paused') {
+      const now = Date.now();
+      set({
+        status: 'running',
+        lastResumeTimestamp: now,
+      });
+      get().syncTimers();
     }
   },
 
@@ -532,48 +735,51 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return state.lastResult;
     }
 
-    const durationSeconds = Math.max(1, state.elapsedSeconds);
+    const now = Date.now();
+    const finalActiveMs =
+      state.accumulatedActiveMs +
+      (state.lastResumeTimestamp ? Math.max(0, now - state.lastResumeTimestamp) : 0);
+    const durationSeconds = Math.max(1, Math.round(finalActiveMs / 1000));
 
-    // If there is an in-progress word when the session ends
+    // Handle any incomplete word when session finishes:
+    // If time expires while a word is incomplete, mark it as unfinished rather than counting as correct
     let finalWordResults = [...state.wordResults];
     let finalAttemptedWords = state.totalWordsAttempted;
     let finalCorrectWords = state.correctWords;
     let finalIncorrectWords = state.incorrectWords;
 
-    if (
-      state.currentWordIndex < state.words.length &&
-      state.currentWordBuffer.length > 0
-    ) {
+    if (state.currentWordIndex < state.words.length && state.currentWordBuffer.length > 0) {
       const currentExpected = state.words[state.currentWordIndex];
-      const isCorrect = areWordsEqual(state.currentWordBuffer, currentExpected, state.language);
-      const errors = isCorrect ? 0 : Math.max(1, computeWordErrors(state.currentWordBuffer, currentExpected));
+      const errors = Math.max(1, computeWordErrors(state.currentWordBuffer, currentExpected));
 
       finalWordResults[state.currentWordIndex] = {
         expected: currentExpected,
         actual: state.currentWordBuffer,
-        status: isCorrect ? 'correct' : 'incorrect',
+        status: 'incorrect',
         errors,
         characters: finalWordResults[state.currentWordIndex].characters,
       };
 
       finalAttemptedWords += 1;
-      if (isCorrect) {
-        finalCorrectWords += 1;
-      } else {
-        finalIncorrectWords += 1;
-      }
+      finalIncorrectWords += 1;
     }
 
-    const finalWordAccuracy = finalAttemptedWords > 0
-      ? Math.round((finalCorrectWords / finalAttemptedWords) * 100)
-      : 100;
+    const finalWordAccuracy =
+      finalAttemptedWords > 0
+        ? Math.round((finalCorrectWords / finalAttemptedWords) * 100)
+        : 100;
+
+    const charTotal = state.correctKeypresses + state.incorrectKeypresses;
+    const finalCharAccuracy =
+      charTotal > 0 ? Math.round((state.correctKeypresses / charTotal) * 100) : 100;
 
     const effectiveMinutes = Math.max(durationSeconds / 60, 0.0167);
     const netChars = finalWordResults
       .filter((w) => w.status === 'correct')
       .reduce((sum, w) => sum + w.expected.length + 1, 0);
     const cpm = Math.round(netChars / effectiveMinutes);
-    const wpm = state.language === 'hi' ? Math.round(cpm / 5) : Math.round((netChars / 5) / effectiveMinutes);
+    const wpm =
+      state.language === 'hi' ? Math.round(cpm / 5) : Math.round(netChars / 5 / effectiveMinutes);
 
     const weakKeysList = Object.entries(state.weakKeysMap).map(([key, data]) => ({
       key,
@@ -582,29 +788,41 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }));
     weakKeysList.sort((a, b) => b.count - a.count);
 
+    const passagesCompletedCount = Math.max(
+      state.completedPassages.length,
+      finalAttemptedWords >= state.words.length ? 1 : state.completedPassages.length
+    );
+
     const result: SessionResult = {
       id: `session-${Date.now()}`,
       lessonId: state.lesson.id,
       lessonTitle: state.lesson.title,
       language: state.language,
       difficulty: state.lesson.difficulty,
-      practiceType: state.lesson.practiceType,
+      practiceType: state.lesson.category || state.lesson.practiceType || 'keys',
+      category: state.lesson.category || 'keys',
       timestamp: Date.now(),
       durationSeconds,
+      selectedDurationMinutes: state.durationMinutes,
+      passagesCompleted: passagesCompletedCount,
+      passages: state.completedPassages,
       wpm,
       cpm,
       accuracy: finalWordAccuracy,
+      characterAccuracy: finalCharAccuracy,
       firstAttemptAccuracy: finalWordAccuracy,
       totalKeypresses: state.totalKeypresses,
       correctKeypresses: state.correctKeypresses,
       incorrectKeypresses: state.incorrectKeypresses,
       backspaceCount: state.backspaceCount,
       correctedErrors: state.correctedErrors,
+      totalMistakes: state.incorrectKeypresses + state.incorrectWords,
       totalWordsAttempted: finalAttemptedWords,
       correctWords: finalCorrectWords,
       incorrectWords: finalIncorrectWords,
       wordAccuracy: finalWordAccuracy,
       weakKeys: weakKeysList,
+      wordResults: finalWordResults,
     };
 
     // Save result to LocalStorage via StorageService
@@ -621,6 +839,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       liveWpm: wpm,
       liveCpm: cpm,
       liveAccuracy: finalWordAccuracy,
+      lastResumeTimestamp: null,
     });
 
     return result;

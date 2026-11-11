@@ -20,7 +20,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm.cmd run dev',
-    port: 5173,
+    url: 'http://localhost:5173',
     reuseExistingServer: true,
     timeout: 60000,
   },

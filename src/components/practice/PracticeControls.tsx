@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Pause, Play, Settings, Keyboard as KeyboardIcon } from 'lucide-react';
+import { RotateCcw, Pause, Play, Settings, Keyboard as KeyboardIcon, CheckCircle } from 'lucide-react';
 import { Button } from '../common/Button';
 import { useSettingsStore } from '../../store/settingsStore';
 
@@ -8,6 +8,7 @@ interface PracticeControlsProps {
   onPause: () => void;
   onResume: () => void;
   onRestart: () => void;
+  onFinish?: () => void;
   onChangeLesson: () => void;
 }
 
@@ -16,6 +17,7 @@ export const PracticeControls: React.FC<PracticeControlsProps> = ({
   onPause,
   onResume,
   onRestart,
+  onFinish,
   onChangeLesson,
 }) => {
   const { virtualKeyboardVisible, toggleVirtualKeyboard } = useSettingsStore();
@@ -51,6 +53,18 @@ export const PracticeControls: React.FC<PracticeControlsProps> = ({
         >
           Restart
         </Button>
+
+        {onFinish && status !== 'completed' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onFinish}
+            icon={<CheckCircle size={14} />}
+            className="text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+          >
+            Finish Session
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
