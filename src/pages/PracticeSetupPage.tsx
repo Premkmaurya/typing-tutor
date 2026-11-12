@@ -360,11 +360,6 @@ export const PracticeSetupPage: React.FC = () => {
                     </div>
 
                     <div className="shrink-0 flex items-center gap-2.5 pl-2">
-                      <div className="text-right">
-                        <span className="text-xs text-slate-400 font-mono block">
-                          ~{Math.round((lesson.estimatedDuration || 60) / 60)}m
-                        </span>
-                      </div>
                       {isSelected ? (
                         <CheckCircle2 size={20} className="text-blue-600 dark:text-blue-400 shrink-0" />
                       ) : (
